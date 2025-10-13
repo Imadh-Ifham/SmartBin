@@ -169,7 +169,7 @@ tmp/
 temp/
 
 # Lock files (keep pnpm-lock.yaml as you're using pnpm)
-package-lock.json
+
 yarn.lock
 
 # Database files
