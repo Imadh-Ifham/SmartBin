@@ -1,0 +1,38 @@
+{
+  "compilerOptions": {
+    /* File Layout */
+    "rootDir": "./src",
+    "outDir": "./dist",
+
+    /* Environment */
+    "target": "ES2020", // Good balance of modern features + Node support
+    "module": "CommonJS", // Use CommonJS unless you want full ESM setup
+    "moduleResolution": "Node", // Node-style resolution
+    "esModuleInterop": true, // Makes imports smoother
+    "resolveJsonModule": true, // If you ever import JSON configs
+    "types": ["node"], // Pull in Node.js types
+
+    /* Outputs */
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+
+    /* Strictness */
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+
+    /* Style Checks */
+    // Uncomment later if you want stricter linting:
+    // "noImplicitReturns": true,
+    // "noImplicitOverride": true,
+    // "noUnusedLocals": true,
+    // "noUnusedParameters": true,
+    // "noFallthroughCasesInSwitch": true,
+
+    /* Misc */
+    "skipLibCheck": true
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
+}
