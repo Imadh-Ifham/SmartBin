@@ -3,6 +3,7 @@ import { Toaster } from "react-hot-toast";
 import "./App.css";
 import { AdminLayout, CollectorLayout, UserLayout } from "../layouts";
 import TrackerPage from "../modules/collector/pages/TrackerPage";
+import ScannerPage from "../modules/collector/pages/ScannerPage";
 
 const App = () => {
   return (
@@ -28,10 +29,7 @@ const App = () => {
         <Route path="/collector" element={<CollectorLayout />}>
           <Route index element={<Navigate to="tracker" />} />
           <Route path="tracker" element={<TrackerPage />} />
-          <Route
-            path="scanner"
-            element={<div className="p-4">SmartBin Scanner Page</div>}
-          />
+          <Route path="scanner" element={<ScannerPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
