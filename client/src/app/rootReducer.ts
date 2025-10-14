@@ -1,8 +1,10 @@
 import { combineReducers } from "@reduxjs/toolkit";
-// import salonLeadReducer from "../modules/salonLeads/slices/salonLeadSlice";
+import collectorReducer from "../modules/collector/slices/collectorSlice";
 
 const rootReducer = combineReducers({
-  //   salonLeads: salonLeadReducer,
+  collector: collectorReducer,
 });
+
+export type RootReducer = typeof rootReducer;
 
 export default rootReducer;

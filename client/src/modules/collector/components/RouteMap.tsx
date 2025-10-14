@@ -6,30 +6,32 @@ import {
   useJsApiLoader,
 } from "@react-google-maps/api";
 
-const containerStyle = {
-  width: "100%",
-  height: "100vh",
-};
+interface Bin {
+  id: number;
+  lat: number;
+  lng: number;
+  status: "pending" | "collected" | "skipped";
+  name?: string;
+}
 
-const RouteMap: React.FC = () => {
+interface RouteMapProps {
+  bins?: Bin[];
+  onMarkCollected?: (id: number) => void;
+  onSkipBin?: (id: number) => void;
+}
+
+const RouteMap: React.FC<RouteMapProps> = ({ bins = [], onMarkCollected }) => {
   const [directions, setDirections] =
     useState<google.maps.DirectionsResult | null>(null);
   const [currentLocation, setCurrentLocation] =
     useState<google.maps.LatLngLiteral | null>(null);
-
-  // Example locations to visit (bins)
-  const locations = [
-    { lat: 6.9344, lng: 79.8428 },
-    { lat: 6.94, lng: 79.86 },
-    { lat: 6.95, lng: 79.87 },
-  ];
 
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
     libraries: ["places"],
   });
 
-  // Get current device location
+  // Get current location
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition((position) => {
@@ -43,24 +45,26 @@ const RouteMap: React.FC = () => {
     }
   }, []);
 
-  // Calculate route when current location is available
+  // Calculate route
   useEffect(() => {
-    if (!currentLocation || !isLoaded) return;
+    if (!currentLocation || !isLoaded || bins.length === 0) return;
 
     const directionsService = new google.maps.DirectionsService();
 
-    // Waypoints are all locations except start and end
-    const waypoints = locations.map((loc) => ({
-      location: loc,
+    const pendingBins = bins.filter((b) => b.status === "pending");
+    if (pendingBins.length === 0) return;
+
+    const waypoints = pendingBins.map((b) => ({
+      location: { lat: b.lat, lng: b.lng },
       stopover: true,
     }));
 
     directionsService.route(
       {
         origin: currentLocation,
-        destination: locations[locations.length - 1],
+        destination: waypoints[waypoints.length - 1].location,
         waypoints,
-        optimizeWaypoints: true, // <-- automatically finds the best route order
+        optimizeWaypoints: true,
         travelMode: google.maps.TravelMode.DRIVING,
       },
       (result, status) => {
@@ -71,29 +75,65 @@ const RouteMap: React.FC = () => {
         }
       }
     );
-  }, [currentLocation, isLoaded]);
+  }, [currentLocation, isLoaded, bins]);
 
-  if (!isLoaded) return <div>Loading map...</div>;
+  if (!isLoaded)
+    return (
+      <div className="flex items-center justify-center h-full text-gray-500 font-medium">
+        Loading map...
+      </div>
+    );
 
   return (
     <GoogleMap
-      mapContainerStyle={containerStyle}
+      mapContainerStyle={{ width: "100%", height: "100%" }}
       center={currentLocation || { lat: 6.9271, lng: 79.8612 }}
       zoom={13}
+      options={{
+        streetViewControl: false,
+        mapTypeControl: false,
+        fullscreenControl: false,
+      }}
     >
+      {/* Current Location */}
       {currentLocation && (
         <Marker
           position={currentLocation}
           title="Your Location"
-          icon="http://maps.google.com/mapfiles/ms/icons/green-dot.png"
+          icon={{
+            url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+          }}
         />
       )}
 
-      {!directions &&
-        locations.map((loc, index) => (
-          <Marker key={index} position={loc} label={`${index + 1}`} />
-        ))}
+      {/* Bin Markers */}
+      {bins.map((b, index) => {
+        let iconUrl = "";
+        if (b.status === "pending")
+          iconUrl = "http://maps.google.com/mapfiles/ms/icons/yellow-dot.png";
+        else if (b.status === "collected")
+          iconUrl = "http://maps.google.com/mapfiles/ms/icons/green-dot.png";
+        else if (b.status === "skipped")
+          iconUrl = "http://maps.google.com/mapfiles/ms/icons/red-dot.png";
 
+        return (
+          <Marker
+            key={b.id}
+            position={{ lat: b.lat, lng: b.lng }}
+            label={{
+              text: `${index + 1}`,
+              className: "text-white font-bold",
+            }}
+            icon={{ url: iconUrl }}
+            onClick={() => {
+              if (b.status === "pending" && onMarkCollected)
+                onMarkCollected(b.id);
+            }}
+          />
+        );
+      })}
+
+      {/* Route */}
       {directions && <DirectionsRenderer directions={directions} />}
     </GoogleMap>
   );

@@ -1,6 +1,5 @@
 import React from "react";
 import { Outlet, Link } from "react-router-dom";
-import "./demo.ts";
 
 const Sidebar: React.FC = () => (
   <aside

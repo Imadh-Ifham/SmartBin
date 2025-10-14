@@ -1,8 +1,8 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import "./App.css";
-import { AdminLayout, UserLayout } from "../layouts";
-import CollectorHome from "../modules/collector/pages/CollectorHome";
+import { AdminLayout, CollectorLayout, UserLayout } from "../layouts";
+import TrackerPage from "../modules/collector/pages/TrackerPage";
 
 const App = () => {
   return (
@@ -25,12 +25,12 @@ const App = () => {
             element={<div className="p-4">SmartBin Leads Page</div>}
           />
         </Route>
-        <Route path="/collector" element={<UserLayout />}>
-          <Route index element={<Navigate to="home" />} />
-          <Route path="home" element={<CollectorHome />} />
+        <Route path="/collector" element={<CollectorLayout />}>
+          <Route index element={<Navigate to="tracker" />} />
+          <Route path="tracker" element={<TrackerPage />} />
           <Route
-            path="leads"
-            element={<div className="p-4">SmartBin Leads Page</div>}
+            path="scanner"
+            element={<div className="p-4">SmartBin Scanner Page</div>}
           />
         </Route>
       </Routes>
