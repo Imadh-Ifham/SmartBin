@@ -19,6 +19,12 @@ const Topbar: React.FC<{ role?: string }> = ({ role }) => (
       {role && <div style={{ color: "#6b7280", fontSize: 13 }}>({role})</div>}
     </div>
     <nav>
+      <Link
+        to="/payment"
+        style={{ marginRight: 12, color: "#065f46", fontWeight: 600 }}
+      >
+        Manage Payment
+      </Link>
       <Link to="/profile" style={{ marginRight: 12, color: "#374151" }}>
         Profile
       </Link>

@@ -5,6 +5,7 @@ import { AdminLayout, CollectorLayout, UserLayout } from "../layouts";
 import TrackerPage from "../modules/collector/pages/TrackerPage";
 import ScannerPage from "../modules/collector/pages/ScannerPage";
 import SmartBin from "../modules/smart-bin/pages/SmartBin";
+import ManagePayment from "../modules/payment/pages/ManagePayment";
 
 const App = () => {
   return (
@@ -29,6 +30,7 @@ const App = () => {
             path="leads"
             element={<div className="p-4">SmartBin Leads Page</div>}
           />
+          <Route path="payment" element={<ManagePayment />} />
         </Route>
 
         {/* Collector App Routes */}
