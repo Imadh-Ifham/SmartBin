@@ -12,9 +12,13 @@ const ERROR_MESSAGES = {
   POLICY_NOT_FOUND: "Policy not found"
 };
 
+export interface FeedbackDateSchemaCtx {
+  addIssue: (issue: { code: string; message: string }) => void;
+}
+
 export const feedbackDateSchema = z
   .union([z.string(), z.date()])
-  .transform((value, ctx) => {
+  .transform((value: string | Date, ctx: FeedbackDateSchemaCtx) => {
     if (value instanceof Date) return value;
     const normalized = value.trim();
     if (!normalized) {
