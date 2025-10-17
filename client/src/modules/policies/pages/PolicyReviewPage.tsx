@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { usePolicy, useUpdatePolicy, useApprovePolicy, useRequestFeedback } from '../hooks/usePolicies'
+import { usePolicy, useUpdatePolicy, useApprovePolicy, useRequestFeedback, usePolicyVersions } from '../hooks/usePolicies'
 import toast from 'react-hot-toast'
 import { ArrowLeft, CheckCircle, MessageSquare, Edit2, Save, X, Calendar, Tag, AlertCircle, AlertTriangle, TrendingUp, BarChart3 } from 'lucide-react'
 
@@ -11,6 +11,7 @@ export default function PolicyReviewPage() {
   const updateMutation = useUpdatePolicy()
   const approveMutation = useApprovePolicy()
   const feedbackMutation = useRequestFeedback()
+  const versionsQuery = usePolicyVersions(id)
   const [editing, setEditing] = useState(false)
   const [description, setDescription] = useState('')
   const [showIssueDialog, setShowIssueDialog] = useState(false)
@@ -426,6 +427,38 @@ export default function PolicyReviewPage() {
                   <p style={{ fontSize: '0.875rem', color: 'var(--color-gray-500)', marginTop: 'var(--spacing-1)' }}>
                     {new Date(entry.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Version History */}
+      {versionsQuery.data && Array.isArray(versionsQuery.data) && versionsQuery.data.length > 0 && (
+        <div className="card" style={{ padding: 'var(--spacing-8)' }}>
+          <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-gray-50)', marginBottom: 'var(--spacing-6)' }}>Version History</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-4)' }}>
+            {(versionsQuery.data as any[]).map((version: any, idx: number) => (
+              <div key={version._id || idx} style={{ display: 'flex', gap: 'var(--spacing-4)', padding: 'var(--spacing-4)', backgroundColor: 'rgba(16, 185, 129, 0.05)', borderRadius: 'var(--border-radius-md)', border: `1px solid var(--color-dark-border)` }}>
+                <div style={{ flexShrink: 0, width: '2rem', height: '2rem', borderRadius: '9999px', backgroundColor: 'var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold', fontSize: '0.875rem' }}>
+                  v{version.version || idx + 1}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--spacing-2)' }}>
+                    <p style={{ fontWeight: '600', color: 'var(--color-gray-50)' }}>{version.title}</p>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--color-gray-500)' }}>
+                      {new Date(version.createdAt || version.effectiveDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                    </span>
+                  </div>
+                  <p style={{ fontSize: '0.875rem', color: 'var(--color-gray-400)', marginBottom: 'var(--spacing-2)' }}>
+                    Status: {version.status || 'Draft'} • Compliance: {version.complianceStatus || 'Pending'}
+                  </p>
+                  {version.description && (
+                    <p style={{ fontSize: '0.875rem', color: 'var(--color-gray-300)' }}>
+                      {version.description.length > 100 ? `${version.description.substring(0, 100)}...` : version.description}
+                    </p>
+                  )}
                 </div>
               </div>
             ))}

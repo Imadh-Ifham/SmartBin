@@ -101,4 +101,7 @@ export const useRequestFeedback = () => {
   } as any)
 }
 
+export const usePolicyVersions = (id?: string) =>
+  useQuery({ queryKey: [...KEY, id, 'versions'], queryFn: () => PolicyAPI.getVersions(id as string), enabled: !!id })
+
 export default usePolicies
