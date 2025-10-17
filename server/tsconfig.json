@@ -10,7 +10,7 @@
     "moduleResolution": "Node", // Node-style resolution
     "esModuleInterop": true, // Makes imports smoother
     "resolveJsonModule": true, // If you ever import JSON configs
-    "types": ["node"], // Pull in Node.js types
+  "types": ["node", "jest"], // Pull in Node.js + Jest types
 
     /* Outputs */
     "sourceMap": true,
