@@ -1,64 +1,86 @@
-import React from "react";
-import { Outlet, Link } from "react-router-dom";
+import type React from 'react';
+import { Outlet, Link } from 'react-router-dom';
+import { LucideHome, LucideCamera, LucideClipboardList, LucideBell } from 'lucide-react';
 
-const Topbar: React.FC<{ role?: string }> = ({ role }) => (
-  <header
-    style={{
-      height: 56,
-      background: "#ffffff",
-      color: "#0f172a",
-      display: "flex",
-      alignItems: "center",
-      padding: "0 16px",
-      boxShadow: "0 1px 0 rgba(15,23,42,0.04)",
-      justifyContent: "space-between",
-    }}
-  >
-    <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-      <div style={{ fontWeight: 600 }}>SmartBin</div>
-      {role && <div style={{ color: "#6b7280", fontSize: 13 }}>({role})</div>}
+const Topbar: React.FC<{ role?: string }> = () => (
+  <header className="navbar">
+    <div className="navbar-container">
+      <Link to="/" className="navbar-brand">
+        SmartBin
+      </Link>
+      <nav className="navbar-menu">
+        <li className="navbar-item">
+          <Link to="/profile" className="navbar-link">
+            Profile
+          </Link>
+        </li>
+        <li className="navbar-item">
+          <Link to="/help" className="navbar-link">
+            Help
+          </Link>
+        </li>
+        <li className="navbar-item">
+          <Link to="/login" className="btn btn-secondary btn-sm">
+            Login
+          </Link>
+        </li>
+      </nav>
     </div>
-    <nav>
-      <Link to="/profile" style={{ marginRight: 12, color: "#374151" }}>
-        Profile
-      </Link>
-      <Link to="/help" style={{ color: "#374151" }}>
-        Help
-      </Link>
-    </nav>
   </header>
 );
 
 const BottomNav: React.FC = () => (
-  <nav
-    style={{
-      height: 56,
-      borderTop: "1px solid #e6eef8",
-      background: "#fff",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-around",
-    }}
-  >
-    <Link to="/home">Home</Link>
-    <Link to="/scan">Scan</Link>
-    <Link to="/requests">Requests</Link>
-    <Link to="/notifications">Notifications</Link>
+  <nav style={{ height: '5rem', backgroundColor: 'rgba(255, 255, 255, 0.1)', backdropFilter: 'blur(8px)', borderTop: `var(--border-width-base) solid rgba(16, 185, 129, 0.3)`, display: 'flex', justifyContent: 'space-around', alignItems: 'center', boxShadow: 'var(--shadow-lg)' }}>
+    <Link
+      to="/home"
+      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'rgb(45, 212, 191)', textDecoration: 'none', fontWeight: 'var(--font-weight-medium)', transition: 'all var(--transition-base)', padding: `var(--spacing-2) var(--spacing-6)`, borderRadius: 'var(--border-radius-lg)' }}
+      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'}
+      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+      aria-label="Go to home"
+    >
+      <LucideHome className="w-6 h-6 mb-1" style={{ color: 'rgb(16, 185, 129)' }} />
+      <span style={{ fontSize: 'var(--font-size-sm)' }}>Home</span>
+    </Link>
+    <Link
+      to="/scan"
+      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'rgb(45, 212, 191)', textDecoration: 'none', fontWeight: 'var(--font-weight-medium)', transition: 'all var(--transition-base)', padding: `var(--spacing-2) var(--spacing-6)`, borderRadius: 'var(--border-radius-lg)' }}
+      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'}
+      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+      aria-label="Scan now"
+    >
+      <LucideCamera className="w-6 h-6 mb-1" style={{ color: 'rgb(45, 212, 191)' }} />
+      <span style={{ fontSize: 'var(--font-size-sm)' }}>Scan</span>
+    </Link>
+    <Link
+      to="/requests"
+      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'rgb(45, 212, 191)', textDecoration: 'none', fontWeight: 'var(--font-weight-medium)', transition: 'all var(--transition-base)', padding: `var(--spacing-2) var(--spacing-6)`, borderRadius: 'var(--border-radius-lg)' }}
+      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'}
+      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+      aria-label="View requests"
+    >
+      <LucideClipboardList className="w-6 h-6 mb-1" style={{ color: 'rgb(34, 197, 234)' }} />
+      <span style={{ fontSize: 'var(--font-size-sm)' }}>Requests</span>
+    </Link>
+    <Link
+      to="/notifications"
+      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'rgb(45, 212, 191)', textDecoration: 'none', fontWeight: 'var(--font-weight-medium)', transition: 'all var(--transition-base)', padding: `var(--spacing-2) var(--spacing-6)`, borderRadius: 'var(--border-radius-lg)' }}
+      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'}
+      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+      aria-label="Check notifications"
+    >
+      <LucideBell className="w-6 h-6 mb-1" style={{ color: 'rgb(59, 130, 246)' }} />
+      <span style={{ fontSize: 'var(--font-size-sm)' }}>Notifications</span>
+    </Link>
   </nav>
 );
 
-const UserLayout: React.FC<{ role?: "collector" | "resident" }> = ({
-  role = "resident",
-}) => {
+const UserLayout: React.FC<{ role?: 'collector' | 'resident' }> = ({ role = 'resident' }) => {
   return (
-    <div
-      style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}
-    >
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Topbar role={role} />
-      <main style={{ flex: 1, padding: 16, background: "#f1f5f9" }}>
+      <main style={{ flex: 1, padding: 'var(--spacing-10)', backgroundColor: 'var(--color-dark-bg)' }}>
         <Outlet />
       </main>
-      {/* collectors may prefer quick nav, residents too - keep simple for now */}
       <BottomNav />
     </div>
   );
