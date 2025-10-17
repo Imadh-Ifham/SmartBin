@@ -1,82 +1,63 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import VideoScannerService from "../services/VideoScannerService";
+import ScanService from "../services/ScanService";
 
-interface Props {
-  onDetected: (raw: string) => void;
-  onError?: (msg: string) => void;
-  setScanning: (s: boolean) => void;
-}
+const service = new VideoScannerService();
 
-const VideoScanner: React.FC<Props> = ({
-  onDetected,
-  onError,
-  setScanning,
-}) => {
+const VideoScanner: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [, setScanning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [cooldown, setCooldown] = useState<number>(0);
+
+  const scanService = new ScanService();
+  const COOLDOWN_TIME = 5; // seconds
+
+  const handleDetected = (raw: string) => {
+    const id = scanService.parseId(raw);
+    if (id !== null) {
+      const found = scanService.findBin(raw);
+      if (!found) setError("Bin not found in local data");
+      else setError(null);
+    }
+  };
+
+  const startScanner = () => {
+    if (!videoRef.current) return;
+
+    service.start(videoRef.current, {
+      onDetected: handleDetected,
+      onError: (err) => {
+        console.error("Scanner error:", err);
+        setError("Camera access failed. Retrying soon...");
+        startCooldown();
+      },
+      onScanning: setScanning,
+    });
+  };
+
+  const startCooldown = () => {
+    setCooldown(COOLDOWN_TIME);
+    service.stop();
+
+    let countdown = COOLDOWN_TIME;
+    const interval = setInterval(() => {
+      countdown -= 1;
+      setCooldown(countdown);
+
+      if (countdown <= 0) {
+        clearInterval(interval);
+        setError(null);
+        startScanner(); // retry after cooldown
+      }
+    }, 1000);
+  };
 
   useEffect(() => {
-    let stream: MediaStream | null = null;
-    let raf = 0;
-    let detector: any = null;
-
-    const start = async () => {
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment" },
-        });
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play();
-        }
-        setScanning(true);
-
-        if ((window as any).BarcodeDetector) {
-          detector = new (window as any).BarcodeDetector({
-            formats: ["qr_code"],
-          });
-          const tick = async () => {
-            if (!videoRef.current || videoRef.current.readyState < 2) {
-              raf = requestAnimationFrame(tick);
-              return;
-            }
-            try {
-              const res = await detector.detect(videoRef.current);
-              if (res && res.length) onDetected(res[0].rawValue);
-            } catch (e) {}
-            raf = requestAnimationFrame(tick);
-          };
-          raf = requestAnimationFrame(tick);
-        } else {
-          const tick = () => {
-            if (!videoRef.current || !canvasRef.current) {
-              raf = requestAnimationFrame(tick);
-              return;
-            }
-            const v = videoRef.current;
-            const c = canvasRef.current;
-            const ctx = c.getContext("2d");
-            if (!ctx) return;
-            c.width = v.videoWidth;
-            c.height = v.videoHeight;
-            ctx.drawImage(v, 0, 0, c.width, c.height);
-            raf = requestAnimationFrame(tick);
-          };
-          raf = requestAnimationFrame(tick);
-        }
-      } catch (err: any) {
-        onError?.("Camera access denied or not available.");
-        setScanning(false);
-      }
-    };
-
-    start();
-
-    return () => {
-      if (raf) cancelAnimationFrame(raf);
-      if (stream) stream.getTracks().forEach((t) => t.stop());
-      if (videoRef.current) videoRef.current.srcObject = null;
-    };
-  }, [onDetected, onError, setScanning]);
+    startScanner();
+    return () => service.stop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="relative">
@@ -86,10 +67,13 @@ const VideoScanner: React.FC<Props> = ({
         muted
         playsInline
       />
-      <canvas ref={canvasRef} className="hidden" />
       <div className="absolute top-2 left-2 bg-black/50 text-white px-2 py-1 rounded-md text-sm">
-        Scanning...
+        {cooldown > 0 ? `Retrying in ${cooldown}s...` : "Scanning..."}
       </div>
+
+      {/* {error && (
+        <div className="mt-3 text-sm text-red-600 transition-all">{error}</div>
+      )} */}
     </div>
   );
 };

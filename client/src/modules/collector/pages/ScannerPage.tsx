@@ -1,72 +1,43 @@
-import React, { useState } from "react";
-import { useSelector, useDispatch } from "react-redux";
-import type { RootState } from "../../../app/store";
-import { selectBins, markCollected, skipBin } from "../slices/collectorSlice";
+import React from "react";
 import VideoScanner from "../components/VideoScanner";
-import ScanControls from "../components/ScanControls";
+import ManualScanner from "../components/ManualScanner";
 import ScanDetails from "../components/ScanDetails";
-import ScanService from "../services/ScanService";
-
-interface Bin {
-  id: number;
-  lat: number;
-  lng: number;
-  status: "pending" | "collected" | "skipped";
-  name?: string;
-}
+import { QrCode, Keyboard } from "lucide-react";
 
 const ScannerPage: React.FC = () => {
-  const [, setScanning] = useState(false);
-  const [lastScan, setLastScan] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const bins = useSelector((s: RootState) => selectBins(s as any)) as Bin[];
-  const dispatch = useDispatch();
-
-  const scanService = new ScanService();
-
-  const handleDetected = (raw: string) => {
-    setLastScan(raw);
-    const id = scanService.parseId(raw);
-    if (id !== null) {
-      const found = scanService.findBin(raw, bins);
-      if (!found) setError("Bin not found in local data");
-      else setError(null);
-    }
-  };
-
-  const onUpload = (data: string) => handleDetected(data);
-
-  const foundBin = lastScan ? scanService.findBin(lastScan, bins) : undefined;
-
   return (
-    <div className="flex flex-col md:flex-row gap-4">
-      <div className="w-full md:w-1/2 bg-white rounded-lg shadow-md p-2">
-        {/* <VideoScanner
-          onDetected={handleDetected}
-          onError={setError}
-          setScanning={setScanning}
-        />
-        <ScanControls
-          lastScan={lastScan}
-          onUpload={onUpload}
-          onMarkCollected={() =>
-            foundBin && dispatch(markCollected(foundBin.id))
-          }
-          onSkip={() => foundBin && dispatch(skipBin(foundBin.id))}
-          disabled={!foundBin}
-        />
+    <div className="flex flex-col md:flex-row gap-6 w-full p-4 md:p-6 bg-gray-50 min-h-screen">
+      {/* Left Section — Scanners */}
+      <div className="w-full md:w-1/2 bg-white rounded-2xl shadow-lg border border-gray-100 p-5 flex flex-col">
+        <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2 mb-4">
+          <QrCode className="text-green-600" size={24} /> Scan Bin
+        </h2>
 
-        {error && <div className="mt-3 text-sm text-red-600">{error}</div>} */}
+        {/* Video Scanner */}
+        <div className="relative mb-4">
+          <VideoScanner />
+        </div>
+
+        {/* Divider */}
+        <div className="flex items-center my-4">
+          <div className="flex-1 border-t border-gray-300" />
+          <span className="px-3 text-gray-500 text-sm font-medium">OR</span>
+          <div className="flex-1 border-t border-gray-300" />
+        </div>
+
+        {/* Manual Scanner */}
+        <div className="flex flex-col gap-3">
+          <h3 className="text-lg font-semibold text-gray-700 flex items-center gap-2">
+            <Keyboard size={18} className="text-blue-600" /> Enter Manually
+          </h3>
+          <ManualScanner />
+        </div>
       </div>
 
-      <ScanDetails
-        bin={foundBin}
-        lastScan={lastScan}
-        onMarkCollected={() => foundBin && dispatch(markCollected(foundBin.id))}
-        onSkip={() => foundBin && dispatch(skipBin(foundBin.id))}
-        error={error}
-      />
+      {/* Right Section — Scan Details */}
+      <div className="w-full md:w-1/2">
+        <ScanDetails />
+      </div>
     </div>
   );
 };

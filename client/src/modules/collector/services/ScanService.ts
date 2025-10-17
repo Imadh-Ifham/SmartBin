@@ -19,9 +19,9 @@ export default class ScanService {
   }
 
   // Find a bin by raw payload and a list of bins. Generic so callers keep full bin type.
-  findBin<T extends BinLite>(raw: string, bins: T[] = []): T | undefined {
+  findBin<T extends BinLite>(raw: string, bins?: T[]): T | undefined {
     const id = this.parseId(raw);
     if (id === null) return undefined;
-    return bins.find((b) => b.id === id);
+    return bins?.find((b) => b.id === id);
   }
 }
