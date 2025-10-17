@@ -8,7 +8,6 @@ import TrackerPage from "../modules/collector/pages/TrackerPage";
 import ScannerPage from "../modules/collector/pages/ScannerPage";
 import { PolicyDetails, PolicyAdminPage, AdminPoliciesPage, PolicyReviewPage } from "../modules/policies";
 import PolicyFormPage from "../modules/policies/pages/PolicyFormPage";
-import PolicyCreateDebugPage from "../pages/admin/PolicyCreateDebugPage";
 import DashboardPage from "../pages/admin/DashboardPage";
 import HomePage from "../pages/HomePage";
 import LoginPage from "../modules/auth/LoginPage";
@@ -66,7 +65,6 @@ const App = () => {
               {/* Admin policy listing and CRUD */}
               <Route index element={<AdminPoliciesPage />} />
               <Route path="new" element={<PolicyFormPage />} />
-              <Route path="debug" element={<PolicyCreateDebugPage />} />
               <Route path=":id">
                 <Route index element={<PolicyReviewPage />} />
                 <Route path="edit" element={<PolicyFormPage />} />
