@@ -1,4 +1,7 @@
 import React from "react";
+import FileService from "../services/FileService";
+
+const fileService = new FileService();
 
 interface Props {
   lastScan?: string | null;
@@ -15,15 +18,15 @@ const ScanControls: React.FC<Props> = ({
   onSkip,
   disabled,
 }) => {
-  const onFilePicked = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onFilePicked = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const data = reader.result as string;
+    try {
+      const data = await fileService.readFileAsText(f);
       onUpload(data);
-    };
-    reader.readAsText(f);
+    } catch (err) {
+      console.error("Failed to read file", err);
+    }
   };
 
   return (

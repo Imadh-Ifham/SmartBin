@@ -5,6 +5,7 @@ import { selectBins, markCollected, skipBin } from "../slices/collectorSlice";
 import VideoScanner from "../components/VideoScanner";
 import ScanControls from "../components/ScanControls";
 import ScanDetails from "../components/ScanDetails";
+import ScanService from "../services/ScanService";
 
 interface Bin {
   id: number;
@@ -22,20 +23,13 @@ const ScannerPage: React.FC = () => {
   const bins = useSelector((s: RootState) => selectBins(s as any)) as Bin[];
   const dispatch = useDispatch();
 
+  const scanService = new ScanService();
+
   const handleDetected = (raw: string) => {
     setLastScan(raw);
-    // parse id same as before
-    let id: number | null = null;
-    try {
-      const parsed = JSON.parse(raw);
-      if (parsed && parsed.id) id = Number(parsed.id);
-    } catch (_) {
-      const n = Number(raw);
-      if (!Number.isNaN(n)) id = n;
-    }
-
+    const id = scanService.parseId(raw);
     if (id !== null) {
-      const found = bins.find((b) => b.id === id);
+      const found = scanService.findBin(raw, bins);
       if (!found) setError("Bin not found in local data");
       else setError(null);
     }
@@ -43,19 +37,7 @@ const ScannerPage: React.FC = () => {
 
   const onUpload = (data: string) => handleDetected(data);
 
-  const foundBin = lastScan
-    ? (() => {
-        let id: number | null = null;
-        try {
-          const parsed = JSON.parse(lastScan);
-          if (parsed && parsed.id) id = Number(parsed.id);
-        } catch (_) {
-          const n = Number(lastScan);
-          if (!Number.isNaN(n)) id = n;
-        }
-        return id !== null ? bins.find((b) => b.id === id) : undefined;
-      })()
-    : undefined;
+  const foundBin = lastScan ? scanService.findBin(lastScan, bins) : undefined;
 
   return (
     <div className="flex flex-col md:flex-row gap-4">
@@ -73,9 +55,9 @@ const ScannerPage: React.FC = () => {
           }
           onSkip={() => foundBin && dispatch(skipBin(foundBin.id))}
           disabled={!foundBin}
-        /> */}
+        />
 
-        {error && <div className="mt-3 text-sm text-red-600">{error}</div>}
+        {error && <div className="mt-3 text-sm text-red-600">{error}</div>} */}
       </div>
 
       <ScanDetails
