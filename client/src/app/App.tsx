@@ -6,7 +6,12 @@ import RequireAdmin from "../components/RequireAdmin";
 import ErrorBoundary from "../components/ErrorBoundary";
 import TrackerPage from "../modules/collector/pages/TrackerPage";
 import ScannerPage from "../modules/collector/pages/ScannerPage";
-import { PolicyDetails, PolicyAdminPage, AdminPoliciesPage, PolicyReviewPage } from "../modules/policies";
+import {
+  PolicyDetails,
+  PolicyAdminPage,
+  AdminPoliciesPage,
+  PolicyReviewPage,
+} from "../modules/policies";
 import PolicyFormPage from "../modules/policies/pages/PolicyFormPage";
 import DashboardPage from "../pages/admin/DashboardPage";
 import HomePage from "../pages/HomePage";
@@ -17,6 +22,8 @@ import SettingsPage from "../pages/admin/SettingsPage";
 import ProfilePage from "../pages/ProfilePage";
 import RequestsPage from "../pages/RequestsPage";
 import NotificationsPage from "../pages/NotificationsPage";
+import SmartBin from "../modules/smart-bin/pages/SmartBin";
+import ManagePayment from "../modules/payment/pages/ManagePayment";
 
 const App = () => {
   return (
@@ -33,14 +40,17 @@ const App = () => {
               <Route index element={<PolicyAdminPage />} />
               <Route path=":id" element={<PolicyDetails />} />
             </Route>
+            <Route path="payment" element={<ManagePayment />} />
           </Route>
 
-          {/* Collector routes */}
+          {/* Collector App Routes */}
           <Route path="/collector" element={<CollectorLayout />}>
             <Route index element={<Navigate to="tracker" />} />
             <Route path="tracker" element={<TrackerPage />} />
             <Route path="scanner" element={<ScannerPage />} />
           </Route>
+
+          <Route path="/smart-bin" element={<SmartBin />} />
 
           {/* Admin routes (protected) */}
           <Route
