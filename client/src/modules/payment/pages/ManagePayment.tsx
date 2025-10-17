@@ -1,29 +1,29 @@
-import { useState } from 'react';
-import { Toaster, toast } from 'react-hot-toast';
-import { DashboardLayout } from '../components/DashboardLayout';
-import { BillingDashboard } from '../components/BillingDashboard';
-import { PaymentCheckout } from '../components/PaymentCheckout';
-import { PaymentSuccess } from '../components/PaymentSuccess';
-import { PaymentFailure } from '../components/PaymentFailure';
-import { RefundRequestDialog } from '../components/RefundRequestDialog';
-import type { Invoice, Payment, PaymentMethod } from '../types/payment';
+import { useState } from "react";
+import { Toaster, toast } from "react-hot-toast";
+import { DashboardLayout } from "../components/DashboardLayout";
+import { BillingDashboard } from "../components/BillingDashboard";
+import { PaymentCheckout } from "../components/PaymentCheckout";
+import { PaymentSuccess } from "../components/PaymentSuccess";
+import { PaymentFailure } from "../components/PaymentFailure";
+import { RefundRequestDialog } from "../components/RefundRequestDialog";
+import type { Invoice, Payment, PaymentMethod } from "../types/payment";
 
-type Screen = 'dashboard' | 'checkout' | 'success' | 'failure';
+type Screen = "dashboard" | "checkout" | "success" | "failure";
 
 const ManagePayment = () => {
-  const [currentScreen, setCurrentScreen] = useState<Screen>('dashboard');
+  const [currentScreen, setCurrentScreen] = useState<Screen>("dashboard");
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [currentPayment, setCurrentPayment] = useState<Payment | null>(null);
-  const [failureReason, setFailureReason] = useState<string>('');
+  const [failureReason, setFailureReason] = useState<string>("");
   const [refundDialogOpen, setRefundDialogOpen] = useState(false);
 
   const handlePayNow = (invoice: Invoice) => {
     setSelectedInvoice(invoice);
-    setCurrentScreen('checkout');
+    setCurrentScreen("checkout");
   };
 
   const handleViewInvoice = (invoice: Invoice) => {
-    if (invoice.status === 'paid') {
+    if (invoice.status === "paid") {
       setSelectedInvoice(invoice);
       setRefundDialogOpen(true);
     }
@@ -42,65 +42,65 @@ const ManagePayment = () => {
         amount: selectedInvoice.amount + (selectedInvoice.lateFee || 0),
         method,
         timestamp: new Date().toISOString(),
-        status: 'success',
+        status: "success",
       };
 
       setCurrentPayment(payment);
-      setCurrentScreen('success');
-      
-      toast.success('Payment Successful', {
+      setCurrentScreen("success");
+
+      toast.success("Payment Successful", {
         duration: 3000,
       });
     } else {
       const reasons = [
-        'Payment declined by your bank. Please check your card details and try again.',
-        'Insufficient funds. Please ensure you have sufficient balance and retry.',
-        'Card expired. Please use a different payment method.',
-        'Payment timeout. The transaction took too long to process.',
-        'Payment gateway error. Please try again or use a different payment method.',
+        "Payment declined by your bank. Please check your card details and try again.",
+        "Insufficient funds. Please ensure you have sufficient balance and retry.",
+        "Card expired. Please use a different payment method.",
+        "Payment timeout. The transaction took too long to process.",
+        "Payment gateway error. Please try again or use a different payment method.",
       ];
-      
+
       const randomReason = reasons[Math.floor(Math.random() * reasons.length)];
       setFailureReason(randomReason);
-      setCurrentScreen('failure');
-      
-      toast.error('Payment Failed');
+      setCurrentScreen("failure");
+
+      toast.error("Payment Failed");
     }
   };
 
   const handleRetryPayment = () => {
-    setCurrentScreen('checkout');
+    setCurrentScreen("checkout");
   };
 
   const handleChangePaymentMethod = () => {
-    setCurrentScreen('checkout');
+    setCurrentScreen("checkout");
   };
 
   const handleContactSupport = () => {
-    toast('Opening support contact form...');
+    toast("Opening support contact form...");
   };
 
   const handleBackToInvoices = () => {
-    setCurrentScreen('dashboard');
+    setCurrentScreen("dashboard");
     setSelectedInvoice(null);
     setCurrentPayment(null);
   };
 
   const handleRefundRequest = (_reason: string, _attachment?: File) => {
-    toast.success('Refund Request Submitted');
+    toast.success("Refund Request Submitted");
   };
 
   return (
     <>
       <DashboardLayout>
-        {currentScreen === 'dashboard' && (
-          <BillingDashboard 
+        {currentScreen === "dashboard" && (
+          <BillingDashboard
             onPayNow={handlePayNow}
             onViewInvoice={handleViewInvoice}
           />
         )}
 
-        {currentScreen === 'checkout' && selectedInvoice && (
+        {currentScreen === "checkout" && selectedInvoice && (
           <PaymentCheckout
             invoice={selectedInvoice}
             onConfirmPayment={handleConfirmPayment}
@@ -108,7 +108,7 @@ const ManagePayment = () => {
           />
         )}
 
-        {currentScreen === 'success' && currentPayment && selectedInvoice && (
+        {currentScreen === "success" && currentPayment && selectedInvoice && (
           <PaymentSuccess
             payment={currentPayment}
             invoice={selectedInvoice}
@@ -116,7 +116,7 @@ const ManagePayment = () => {
           />
         )}
 
-        {currentScreen === 'failure' && selectedInvoice && (
+        {currentScreen === "failure" && selectedInvoice && (
           <PaymentFailure
             invoice={selectedInvoice}
             failureReason={failureReason}

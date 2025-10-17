@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { FileText, Upload, CheckCircle } from 'lucide-react';
+import { useState } from "react";
+import { FileText, Upload, CheckCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -7,11 +7,11 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from './ui/dialog';
-import { Button } from './ui/button';
-import { Textarea } from './ui/textarea';
-import { Label } from './ui/label';
-import type { Invoice } from '../types/payment';
+} from "./ui/dialog";
+import { Button } from "./ui/button";
+import { Textarea } from "./ui/textarea";
+import { Label } from "./ui/label";
+import type { Invoice } from "../types/payment";
 
 interface RefundRequestDialogProps {
   open: boolean;
@@ -20,13 +20,13 @@ interface RefundRequestDialogProps {
   onSubmit: (reason: string, attachment?: File) => void;
 }
 
-export function RefundRequestDialog({ 
-  open, 
-  onOpenChange, 
+export function RefundRequestDialog({
+  open,
+  onOpenChange,
   invoice,
-  onSubmit 
+  onSubmit,
 }: RefundRequestDialogProps) {
-  const [reason, setReason] = useState('');
+  const [reason, setReason] = useState("");
   const [attachment, setAttachment] = useState<File | null>(null);
   const [submitted, setSubmitted] = useState(false);
 
@@ -36,7 +36,7 @@ export function RefundRequestDialog({
       setSubmitted(true);
       setTimeout(() => {
         setSubmitted(false);
-        setReason('');
+        setReason("");
         setAttachment(null);
         onOpenChange(false);
       }, 2000);
@@ -50,9 +50,9 @@ export function RefundRequestDialog({
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-LK', {
-      style: 'currency',
-      currency: 'LKR',
+    return new Intl.NumberFormat("en-LK", {
+      style: "currency",
+      currency: "LKR",
     }).format(amount);
   };
 
@@ -66,7 +66,8 @@ export function RefundRequestDialog({
             </div>
             <h3 className="text-gray-900 mb-2">Request Submitted</h3>
             <p className="text-gray-600">
-              Your refund request has been submitted to the Authority. You will receive a response within 3-5 business days.
+              Your refund request has been submitted to the Authority. You will
+              receive a response within 3-5 business days.
             </p>
           </div>
         </DialogContent>
@@ -80,7 +81,8 @@ export function RefundRequestDialog({
         <DialogHeader>
           <DialogTitle>Request Refund or Dispute</DialogTitle>
           <DialogDescription>
-            Submit a refund request or dispute for invoice {invoice.invoiceNumber}
+            Submit a refund request or dispute for invoice{" "}
+            {invoice.invoiceNumber}
           </DialogDescription>
         </DialogHeader>
 
@@ -90,8 +92,10 @@ export function RefundRequestDialog({
             <div className="flex items-start gap-3">
               <FileText className="w-5 h-5 text-gray-600 mt-0.5" />
               <div className="flex-1">
-                <p className="text-gray-900">Invoice: {invoice.invoiceNumber}</p>
-                <p className="text-gray-600" style={{ fontSize: '14px' }}>
+                <p className="text-gray-900">
+                  Invoice: {invoice.invoiceNumber}
+                </p>
+                <p className="text-gray-600" style={{ fontSize: "14px" }}>
                   {invoice.reason} • {formatCurrency(invoice.amount)}
                 </p>
               </div>
@@ -109,7 +113,7 @@ export function RefundRequestDialog({
               rows={5}
               className="mt-2 resize-none"
             />
-            <p className="text-gray-500 mt-1" style={{ fontSize: '12px' }}>
+            <p className="text-gray-500 mt-1" style={{ fontSize: "12px" }}>
               Minimum 20 characters required
             </p>
           </div>
@@ -118,13 +122,13 @@ export function RefundRequestDialog({
           <div>
             <Label htmlFor="attachment">Supporting Documents (Optional)</Label>
             <div className="mt-2">
-              <label 
+              <label
                 htmlFor="attachment"
                 className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-gray-400 transition-colors"
               >
                 <Upload className="w-5 h-5 text-gray-600" />
                 <span className="text-gray-700">
-                  {attachment ? attachment.name : 'Click to upload file'}
+                  {attachment ? attachment.name : "Click to upload file"}
                 </span>
               </label>
               <input
@@ -135,17 +139,14 @@ export function RefundRequestDialog({
                 accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
               />
             </div>
-            <p className="text-gray-500 mt-1" style={{ fontSize: '12px' }}>
+            <p className="text-gray-500 mt-1" style={{ fontSize: "12px" }}>
               Accepted formats: PDF, JPG, PNG, DOC (Max 5MB)
             </p>
           </div>
         </div>
 
         <DialogFooter className="gap-2">
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-          >
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           <Button

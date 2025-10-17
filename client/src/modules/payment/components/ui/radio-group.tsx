@@ -7,8 +7,20 @@ interface RadioGroupContextValue {
 
 const Ctx = React.createContext<RadioGroupContextValue | null>(null);
 
-export function RadioGroup({ value, onValueChange, children }: { value: string; onValueChange: (v: string) => void; children: React.ReactNode; }) {
-  return <Ctx.Provider value={{ value, setValue: onValueChange }}>{children}</Ctx.Provider>;
+export function RadioGroup({
+  value,
+  onValueChange,
+  children,
+}: {
+  value: string;
+  onValueChange: (v: string) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <Ctx.Provider value={{ value, setValue: onValueChange }}>
+      {children}
+    </Ctx.Provider>
+  );
 }
 
 export function RadioGroupItem({ value, id }: { value: string; id: string }) {
