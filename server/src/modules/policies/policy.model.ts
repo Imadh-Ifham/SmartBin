@@ -1,8 +1,9 @@
 import { Schema, model, Document, Types } from "mongoose";
+import { POLICY_STATUS, COMPLIANCE_STATUS, STAKEHOLDER_TYPES } from "./constants";
 
-export type PolicyStatus = "Draft" | "UnderReview" | "Active" | "Retired" | "Archived";
-export type PolicyComplianceStatus = "Compliant" | "NonCompliant" | "Pending";
-export type PolicyStakeholderType = "resident" | "business" | "staff";
+export type PolicyStatus = typeof POLICY_STATUS[keyof typeof POLICY_STATUS];
+export type PolicyComplianceStatus = typeof COMPLIANCE_STATUS[keyof typeof COMPLIANCE_STATUS];
+export type PolicyStakeholderType = typeof STAKEHOLDER_TYPES[keyof typeof STAKEHOLDER_TYPES];
 
 export interface PolicyFeedback {
   stakeholderType: PolicyStakeholderType;
@@ -29,7 +30,7 @@ export interface IPolicy extends Document {
   feedback: PolicyFeedback[];
   auditTrail: PolicyAuditEntry[];
   issues: string[];
-  updatedAt: Date; // renamed to match frontend expectation
+  updatedAt: Date;
   createdAt: Date;
 }
 
@@ -37,11 +38,11 @@ const FeedbackSchema = new Schema<PolicyFeedback>(
   {
     stakeholderType: {
       type: String,
-      enum: ["resident", "business", "staff"],
-      required: true
+      enum: Object.values(STAKEHOLDER_TYPES),
+      required: true,
     },
     message: { type: String, trim: true },
-    date: { type: Date, default: Date.now }
+    date: { type: Date, default: Date.now },
   },
   { _id: false }
 );
@@ -50,7 +51,7 @@ const AuditTrailSchema = new Schema<PolicyAuditEntry>(
   {
     action: { type: String, required: true, trim: true },
     date: { type: Date, default: Date.now },
-    user: { type: Schema.Types.ObjectId, ref: "User" }
+    user: { type: Schema.Types.ObjectId, ref: "User" },
   },
   { _id: false }
 );
@@ -64,27 +65,25 @@ const PolicySchema = new Schema<IPolicy>(
     effectiveDate: { type: Date, required: true },
     status: {
       type: String,
-      enum: ["Draft", "UnderReview", "Active", "Retired", "Archived"],
-      default: "Draft",
-      index: true
+      enum: Object.values(POLICY_STATUS),
+      default: POLICY_STATUS.DRAFT,
+      index: true,
     },
     complianceStatus: {
       type: String,
-      enum: ["Compliant", "NonCompliant", "Pending"],
-      default: "Compliant",
-      index: true
+      enum: Object.values(COMPLIANCE_STATUS),
+      default: COMPLIANCE_STATUS.COMPLIANT,
+      index: true,
     },
     version: { type: Number, default: 1 },
     lastReviewedBy: { type: Schema.Types.ObjectId, ref: "User" },
     feedback: { type: [FeedbackSchema], default: [] },
     auditTrail: { type: [AuditTrailSchema], default: [] },
-  issues: { type: [String], default: [] },
-  updatedAt: { type: Date, default: Date.now }
+    issues: { type: [String], default: [] },
   },
   {
-    // Use updatedAt so frontend and API consumers get `updatedAt` (ISO) field
     timestamps: { createdAt: "createdAt", updatedAt: "updatedAt" },
-    versionKey: false
+    versionKey: false,
   }
 );
 

@@ -2,6 +2,15 @@ import { Request, Response, NextFunction } from "express";
 import { z } from "zod";
 import { PolicyService } from "./policy.service";
 import type { PolicyCreateDTO, PolicyUpdateDTO } from "./policy.service";
+import { STAKEHOLDER_TYPES } from "./constants";
+import { FeedbackRequest, IssueRequest, ServiceOptions } from "./types";
+
+const ERROR_MESSAGES = {
+  VALIDATION_FAILED: "Validation failed",
+  SERVER_ERROR: "Server error",
+  INVALID_ID: "Invalid id",
+  POLICY_NOT_FOUND: "Policy not found"
+};
 
 export const feedbackDateSchema = z
   .union([z.string(), z.date()])
@@ -21,7 +30,7 @@ export const feedbackDateSchema = z
   });
 
 export const feedbackSchema = z.object({
-  stakeholderType: z.enum(["resident", "business", "staff"]),
+  stakeholderType: z.enum([STAKEHOLDER_TYPES.RESIDENT, STAKEHOLDER_TYPES.BUSINESS, STAKEHOLDER_TYPES.STAFF]),
   message: z.string().trim().min(1, "Feedback message is required").optional(),
   date: feedbackDateSchema.optional()
 });
@@ -57,8 +66,12 @@ export const updateSchema = baseSchema.partial();
 export const sendError = (res: Response, code: number, message: string, details?: any) =>
   res.status(code).json({ error: message, details });
 
-export const extractUserId = (req: Request) =>
+export const extractUserId = (req: Request): string | undefined =>
   (req as any).user?.id || (req as any).user?._id || undefined;
+
+export const buildServiceOptions = (userId: string | undefined): ServiceOptions => ({
+  ...(userId && { userId })
+});
 
 /**
  * Policy Controller — handles HTTP layer
@@ -69,14 +82,58 @@ export class PolicyControllerClass {
     try {
       const payload = createSchema.parse(req.body);
       const userId = extractUserId(req);
+      const options = buildServiceOptions(userId);
       const policy = await PolicyService.create(
         { ...(payload as PolicyCreateDTO) },
-        { userId }
+        options
       );
       return res.status(201).json({ message: "Policy created successfully", policy });
     } catch (e: any) {
-      if (e instanceof z.ZodError) return sendError(res, 400, "Validation failed", e.issues);
-      return sendError(res, 500, "Server error");
+      if (e instanceof z.ZodError) return sendError(res, 400, ERROR_MESSAGES.VALIDATION_FAILED, e.issues);
+      return sendError(res, 500, ERROR_MESSAGES.SERVER_ERROR);
+    }
+  };
+
+  /** Get a single policy by ID */
+  public get = async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      if (typeof id !== "string") return sendError(res, 400, ERROR_MESSAGES.INVALID_ID);
+
+      const policy = await PolicyService.get(id);
+      if (!policy) return sendError(res, 404, ERROR_MESSAGES.POLICY_NOT_FOUND);
+
+      return res.json({ policy });
+    } catch {
+      return sendError(res, 500, ERROR_MESSAGES.SERVER_ERROR);
+    }
+  };
+
+  /** List versions for a policy */
+  public versions = async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      if (typeof id !== "string") return sendError(res, 400, ERROR_MESSAGES.INVALID_ID);
+
+      const versions = await (PolicyService as any).versions?.(id);
+      if (!versions) return sendError(res, 404, ERROR_MESSAGES.POLICY_NOT_FOUND);
+      return res.json({ count: versions.length, versions });
+    } catch {
+      return sendError(res, 500, ERROR_MESSAGES.SERVER_ERROR);
+    }
+  };
+
+  /** Get audit trail for a policy */
+  public audit = async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      if (typeof id !== "string") return sendError(res, 400, ERROR_MESSAGES.INVALID_ID);
+
+      const audit = await (PolicyService as any).audit?.(id);
+      if (!audit) return sendError(res, 404, ERROR_MESSAGES.POLICY_NOT_FOUND);
+      return res.json({ count: audit.length, audit });
+    } catch {
+      return sendError(res, 500, ERROR_MESSAGES.SERVER_ERROR);
     }
   };
 
@@ -95,51 +152,7 @@ export class PolicyControllerClass {
       const policies = await PolicyService.list(query);
       return res.json({ count: policies.length, policies });
     } catch {
-      return sendError(res, 500, "Server error");
-    }
-  };
-
-  /** Get a single policy by ID */
-  public get = async (req: Request, res: Response) => {
-    try {
-      const { id } = req.params;
-      if (typeof id !== "string") return sendError(res, 400, "Invalid ID");
-
-      const policy = await PolicyService.get(id);
-      if (!policy) return sendError(res, 404, "Policy not found");
-
-      return res.json({ policy });
-    } catch {
-      return sendError(res, 500, "Server error");
-    }
-  };
-
-  /** List versions for a policy */
-  public versions = async (req: Request, res: Response) => {
-    try {
-      const { id } = req.params;
-      if (typeof id !== "string") return sendError(res, 400, "Invalid ID");
-
-      // PolicyService.versions should return an array of versions
-      const versions = await (PolicyService as any).versions?.(id);
-      if (!versions) return sendError(res, 404, "Policy not found");
-      return res.json({ count: versions.length, versions });
-    } catch {
-      return sendError(res, 500, "Server error");
-    }
-  };
-
-  /** Get audit trail for a policy */
-  public audit = async (req: Request, res: Response) => {
-    try {
-      const { id } = req.params;
-      if (typeof id !== "string") return sendError(res, 400, "Invalid ID");
-
-      const audit = await (PolicyService as any).audit?.(id);
-      if (!audit) return sendError(res, 404, "Policy not found");
-      return res.json({ count: audit.length, audit });
-    } catch {
-      return sendError(res, 500, "Server error");
+      return sendError(res, 500, ERROR_MESSAGES.SERVER_ERROR);
     }
   };
 
@@ -148,20 +161,21 @@ export class PolicyControllerClass {
     try {
       const payload = updateSchema.parse(req.body);
       const { id } = req.params;
-      if (typeof id !== "string") return sendError(res, 400, "Invalid ID");
+      if (typeof id !== "string") return sendError(res, 400, ERROR_MESSAGES.INVALID_ID);
 
       const userId = extractUserId(req);
+      const options = buildServiceOptions(userId);
       const updated = await PolicyService.update(
         id,
         payload as PolicyUpdateDTO,
-        { userId }
+        options
       );
-      if (!updated) return sendError(res, 404, "Policy not found");
+      if (!updated) return sendError(res, 404, ERROR_MESSAGES.POLICY_NOT_FOUND);
 
       return res.json({ message: "Policy updated successfully", policy: updated });
     } catch (e: any) {
-      if (e instanceof z.ZodError) return sendError(res, 400, "Validation failed", e.issues);
-      return sendError(res, 500, "Server error");
+      if (e instanceof z.ZodError) return sendError(res, 400, ERROR_MESSAGES.VALIDATION_FAILED, e.issues);
+      return sendError(res, 500, ERROR_MESSAGES.SERVER_ERROR);
     }
   };
 
@@ -169,15 +183,16 @@ export class PolicyControllerClass {
   public approve = async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      if (typeof id !== "string") return sendError(res, 400, "Invalid ID");
+      if (typeof id !== "string") return sendError(res, 400, ERROR_MESSAGES.INVALID_ID);
 
       const userId = extractUserId(req);
-      const approved = await PolicyService.approve(id, { userId });
-      if (!approved) return sendError(res, 404, "Policy not found");
+      const options = buildServiceOptions(userId);
+      const approved = await PolicyService.approve(id, options);
+      if (!approved) return sendError(res, 404, ERROR_MESSAGES.POLICY_NOT_FOUND);
 
       return res.json({ message: "Policy approved successfully", policy: approved });
     } catch {
-      return sendError(res, 500, "Server error");
+      return sendError(res, 500, ERROR_MESSAGES.SERVER_ERROR);
     }
   };
 
@@ -189,16 +204,17 @@ export class PolicyControllerClass {
         .object({ issue: z.string().min(3, "Issue description required") })
         .parse(req.body);
 
-      if (typeof id !== "string") return sendError(res, 400, "Invalid ID");
+      if (typeof id !== "string") return sendError(res, 400, ERROR_MESSAGES.INVALID_ID);
 
       const userId = extractUserId(req);
-      const updated = await PolicyService.markIssue(id, issue, { userId });
-      if (!updated) return sendError(res, 404, "Policy not found");
+      const options = buildServiceOptions(userId);
+      const updated = await PolicyService.markIssue(id, issue, options);
+      if (!updated) return sendError(res, 404, ERROR_MESSAGES.POLICY_NOT_FOUND);
 
       return res.json({ message: "Issue recorded successfully", policy: updated });
     } catch (e: any) {
-      if (e instanceof z.ZodError) return sendError(res, 400, "Validation failed", e.issues);
-      return sendError(res, 500, "Server error");
+      if (e instanceof z.ZodError) return sendError(res, 400, ERROR_MESSAGES.VALIDATION_FAILED, e.issues);
+      return sendError(res, 500, ERROR_MESSAGES.SERVER_ERROR);
     }
   };
 
@@ -206,15 +222,16 @@ export class PolicyControllerClass {
   public requestFeedback = async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const { stakeholderGroups, message } = req.body as any;
-      if (typeof id !== "string") return sendError(res, 400, "Invalid ID");
+      const { stakeholderGroups, message } = req.body as FeedbackRequest;
+      if (typeof id !== "string") return sendError(res, 400, ERROR_MESSAGES.INVALID_ID);
 
       const userId = extractUserId(req);
-      const result = await (PolicyService as any).requestFeedback?.(id, { stakeholderGroups, message }, { userId });
-      if (!result) return sendError(res, 404, "Policy not found");
+      const options = buildServiceOptions(userId);
+      const result = await (PolicyService as any).requestFeedback?.(id, { stakeholderGroups, message }, options);
+      if (!result) return sendError(res, 404, ERROR_MESSAGES.POLICY_NOT_FOUND);
       return res.json({ message: "Feedback requested", result });
     } catch (e: any) {
-      return sendError(res, 500, "Server error");
+      return sendError(res, 500, ERROR_MESSAGES.SERVER_ERROR);
     }
   };
 
@@ -222,14 +239,36 @@ export class PolicyControllerClass {
   public remove = async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      if (typeof id !== "string") return sendError(res, 400, "Invalid ID");
+      if (typeof id !== "string") return sendError(res, 400, ERROR_MESSAGES.INVALID_ID);
 
       const deleted = await PolicyService.remove(id);
-      if (!deleted) return sendError(res, 404, "Policy not found");
+      if (!deleted) return sendError(res, 404, ERROR_MESSAGES.POLICY_NOT_FOUND);
 
       return res.json({ message: "Policy deleted successfully" });
     } catch {
-      return sendError(res, 500, "Server error");
+      return sendError(res, 500, ERROR_MESSAGES.SERVER_ERROR);
+    }
+  };
+
+  /** Revalidate compliance for a policy */
+  public revalidateCompliance = async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      if (typeof id !== "string") return sendError(res, 400, ERROR_MESSAGES.INVALID_ID);
+
+      const userId = extractUserId(req);
+      const options = buildServiceOptions(userId);
+      const result = await (PolicyService as any).revalidateCompliance(id, options);
+      if (!result) return sendError(res, 404, ERROR_MESSAGES.POLICY_NOT_FOUND);
+
+      return res.json({
+        message: "Compliance revalidated successfully",
+        policy: result.policy,
+        complianceResult: result.complianceResult,
+        statusChanged: result.statusChanged
+      });
+    } catch (e: any) {
+      return sendError(res, 500, ERROR_MESSAGES.SERVER_ERROR);
     }
   };
 }
