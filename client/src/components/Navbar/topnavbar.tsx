@@ -1,8 +1,13 @@
-import { Link, useLocation } from "react-router-dom";
-import { LogIn } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { LogIn, LogOut } from "lucide-react";
+import { useMe, useLogout } from "../../api/auth/useAuth";
+import { toast } from "react-hot-toast";
 
 export default function TopNavbar() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { data: user } = useMe();
+  const logout = useLogout();
   const isAuth =
     location.pathname.startsWith("/login") ||
     location.pathname.startsWith("/register");
@@ -34,13 +39,31 @@ export default function TopNavbar() {
           >
             Manage Payment
           </Link>
-          <Link
-            to="/login"
-            className="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-3 py-1.5 text-white hover:bg-emerald-700 transition-colors"
-          >
-            <LogIn className="h-4 w-4" />
-            Login
-          </Link>
+          {user ? (
+            <button
+              onClick={async () => {
+                try {
+                  await logout.mutateAsync();
+                  toast.success("Logged out");
+                  navigate("/login");
+                } catch (e: any) {
+                  toast.error("Logout failed");
+                }
+              }}
+              className="inline-flex items-center gap-1 rounded-md bg-slate-800 px-3 py-1.5 text-white hover:bg-slate-900 transition-colors"
+            >
+              <LogOut className="h-4 w-4" />
+              Logout
+            </button>
+          ) : (
+            <Link
+              to="/login"
+              className="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-3 py-1.5 text-white hover:bg-emerald-700 transition-colors"
+            >
+              <LogIn className="h-4 w-4" />
+              Login
+            </Link>
+          )}
         </nav>
 
         {/* Compact menu for small screens (simple) */}
