@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { UserRepository } from "./repositories/user.repository";
-import { IUser } from "./models/user.model";
+import { UserRepository } from "../repositories/user.repository";
+import { IUser } from "../models/user.model";
 
 export class AuthService {
   private userRepository: UserRepository;
