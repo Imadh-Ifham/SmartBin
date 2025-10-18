@@ -7,7 +7,7 @@ import {
   generateInvoice,
   refund,
   adminReports,
-} from "../controllers/paymentController";
+} from "../controllers/payment.Controller";
 
 const router = Router();
 
