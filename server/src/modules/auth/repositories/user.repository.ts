@@ -9,4 +9,8 @@ export class UserRepository {
     const newUser = new UserModel(user);
     return newUser.save();
   }
+
+  async findById(id: string): Promise<IUser | null> {
+    return UserModel.findById(id).exec();
+  }
 }

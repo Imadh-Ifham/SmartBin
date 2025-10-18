@@ -1,4 +1,5 @@
 import express, { Application } from "express";
+import cookieParser from "cookie-parser";
 import morgan from "morgan";
 import cors from "cors";
 import helmet from "helmet";
@@ -13,6 +14,7 @@ const app: Application = express();
 
 // Middleware
 app.use(express.json());
+app.use(cookieParser());
 // Allow only the frontend origin in development/local setups to avoid CORS issues
 const allowedOrigin = process.env.CLIENT_ORIGIN || "http://localhost:5173";
 app.use(
