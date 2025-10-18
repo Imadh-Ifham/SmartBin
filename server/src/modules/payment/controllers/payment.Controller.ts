@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
-import { PaymentService } from "../services/paymentService";
-import { InvoiceService } from "../services/invoiceService";
+import { PaymentService } from "../services/payment.service";
+import { InvoiceService } from "../services/invoice.service";
 
 const paymentService = new PaymentService();
 const invoiceService = new InvoiceService();

@@ -1,4 +1,4 @@
-import { InvoiceRepository } from "../repositories/invoiceRepository";
+import { InvoiceRepository } from "../repositories/invoice.repository";
 
 export class InvoiceService {
   private repo = new InvoiceRepository();

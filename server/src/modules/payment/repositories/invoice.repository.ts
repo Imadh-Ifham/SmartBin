@@ -1,4 +1,4 @@
-import { InvoiceModel, IInvoice } from "../models/invoiceModel";
+import { InvoiceModel, IInvoice } from "../models/invoice.model";
 
 export class InvoiceRepository {
   async create(data: Partial<IInvoice>) {

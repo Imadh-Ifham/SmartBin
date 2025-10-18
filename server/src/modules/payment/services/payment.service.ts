@@ -1,12 +1,12 @@
-import { InvoiceRepository } from "../repositories/invoiceRepository";
-import { PaymentRepository } from "../repositories/paymentRepository";
-import { NotificationService } from "./notificationService";
+import { InvoiceRepository } from "../repositories/invoice.repository";
+import { PaymentRepository } from "../repositories/payment.repository";
+import { NotificationService } from "./notification.service";
 import {
   PaymentStrategy,
   CardPayment,
   BankPayment,
   WalletPayment,
-} from "../types/paymentTypes";
+} from "../types/payment.types";
 
 export class PaymentService {
   private invoiceRepo = new InvoiceRepository();
