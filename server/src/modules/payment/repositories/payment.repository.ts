@@ -1,4 +1,4 @@
-import { PaymentModel, IPayment } from "../models/paymentModel";
+import { PaymentModel, IPayment } from "../models/payment.model";
 
 export class PaymentRepository {
   async create(data: Partial<IPayment>) {

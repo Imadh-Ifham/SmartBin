@@ -1,2 +1,2 @@
-import paymentRoutes from "./routes/paymentRoutes";
+import paymentRoutes from "./routes/payment.routes";
 export { paymentRoutes };
