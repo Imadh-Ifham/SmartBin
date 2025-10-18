@@ -1,17 +1,2 @@
-/* ============================================
-   EXTERNAL CSS DESIGN SYSTEM
-   ============================================
-   Import all design system styles in order:
-   1. Design Variables (CSS custom properties)
-   2. Base Styles (typography, reset)
-   3. Component Styles (buttons, forms, cards, etc.)
-   4. Tailwind (as fallback for utility classes)
-*/
-
-/* Component Styles */
-@import "./styles/components/buttons.css";
-@import "./styles/components/forms.css";
-@import "./styles/components/cards.css";
-@import "./styles/components/tables.css";
-@import "./styles/components/alerts.css";
-@import "./styles/components/navigation.css";
+/* Minimal global CSS: load Tailwind only */
+@import "tailwindcss";
