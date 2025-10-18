@@ -15,7 +15,7 @@ import {
 import PolicyFormPage from "../modules/policies/pages/PolicyFormPage";
 import DashboardPage from "../pages/admin/DashboardPage";
 import HomePage from "../pages/HomePage";
-import LoginPage from "../modules/auth/LoginPage";
+
 import UsersPage from "../pages/admin/UsersPage";
 import ReportsPage from "../pages/admin/ReportsPage";
 import SettingsPage from "../pages/admin/SettingsPage";
@@ -86,7 +86,6 @@ const App = () => {
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/requests" element={<RequestsPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
-          <Route path="/login" element={<LoginPage />} />
         </Routes>
       </BrowserRouter>
     </ErrorBoundary>
