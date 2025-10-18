@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { UserRepository } from "./user.repository";
-import { IUser } from "./user.model";
+import { UserRepository } from "./repositories/user.repository";
+import { IUser } from "./models/user.model";
 
 export class AuthService {
   private userRepository: UserRepository;
@@ -17,7 +17,11 @@ export class AuthService {
     const existing = await this.userRepository.findByUsername(username);
     if (existing) throw new Error("Username already exists");
     const hashedPassword = await bcrypt.hash(password, 10);
-    return this.userRepository.create({ username, password: hashedPassword, role });
+    return this.userRepository.create({
+      username,
+      password: hashedPassword,
+      role,
+    });
   }
 
   async login(username: string, password: string) {
@@ -28,7 +32,11 @@ export class AuthService {
     if (username === envAdminUser) {
       // validate against ENV password (no DB lookup required)
       if (password !== envAdminPass) throw new Error("Invalid password");
-      const token = jwt.sign({ id: "admin", role: "admin" }, process.env.JWT_SECRET || "defaultsecret", { expiresIn: "1h" });
+      const token = jwt.sign(
+        { id: "admin", role: "admin" },
+        process.env.JWT_SECRET || "defaultsecret",
+        { expiresIn: "1h" }
+      );
       return { token, role: "admin", username: envAdminUser };
     }
 
