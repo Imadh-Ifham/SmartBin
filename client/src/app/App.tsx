@@ -1,17 +1,12 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import "./App.css";
-import { AdminLayout, CollectorLayout, UserLayout } from "../layouts";
+import { AdminLayout, CollectorLayout } from "../layouts";
 import RequireAdmin from "../components/RequireAdmin";
 import ErrorBoundary from "../components/ErrorBoundary";
 import TrackerPage from "../modules/collector/pages/TrackerPage";
 import ScannerPage from "../modules/collector/pages/ScannerPage";
-import {
-  PolicyDetails,
-  PolicyAdminPage,
-  AdminPoliciesPage,
-  PolicyReviewPage,
-} from "../modules/policies";
+import { AdminPoliciesPage, PolicyReviewPage } from "../modules/policies";
 import PolicyFormPage from "../modules/policies/pages/PolicyFormPage";
 import DashboardPage from "../pages/admin/DashboardPage";
 import HomePage from "../pages/HomePage";
@@ -23,29 +18,22 @@ import ProfilePage from "../pages/ProfilePage";
 import RequestsPage from "../pages/RequestsPage";
 import NotificationsPage from "../pages/NotificationsPage";
 import SmartBin from "../modules/smart-bin/pages/SmartBin";
-import ManagePayment from "../modules/payment/pages/ManagePayment";
 import { LoginScreen, RegisterScreen } from "../modules/auth/screens";
+import { userProtectedRoutes } from "../routes/ProtectedRoutes";
+import RootRedirect from "../routes/RootRedirect";
 
 const App = () => {
   return (
-    <ErrorBoundary>
-      <BrowserRouter>
+    <BrowserRouter>
+      <ErrorBoundary>
         <Toaster position="top-right" />
         <Routes>
           {/* Auth first: make / route go to login */}
           <Route path="/login" element={<LoginScreen />} />
           <Route path="/register" element={<RegisterScreen />} />
-          <Route path="/" element={<Navigate to="/login" replace />} />
-          {/* App routes under the user layout */}
-          <Route path="/" element={<UserLayout />}>
-            <Route path="home" element={<HomePage />} />
-            <Route path="home" element={<HomePage />} />
-            <Route path="policies">
-              <Route index element={<PolicyAdminPage />} />
-              <Route path=":id" element={<PolicyDetails />} />
-            </Route>
-            <Route path="payment" element={<ManagePayment />} />
-          </Route>
+          <Route path="/" element={<RootRedirect />} />
+          {/* App routes under the user layout (protected) */}
+          {userProtectedRoutes}
 
           {/* Collector App Routes */}
           <Route path="/collector" element={<CollectorLayout />}>
@@ -91,8 +79,8 @@ const App = () => {
           <Route path="/requests" element={<RequestsPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
         </Routes>
-      </BrowserRouter>
-    </ErrorBoundary>
+      </ErrorBoundary>
+    </BrowserRouter>
   );
 };
 
