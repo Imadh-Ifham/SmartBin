@@ -15,7 +15,7 @@ import {
 import PolicyFormPage from "../modules/policies/pages/PolicyFormPage";
 import DashboardPage from "../pages/admin/DashboardPage";
 import HomePage from "../pages/HomePage";
-import LoginPage from "../modules/auth/LoginPage";
+
 import UsersPage from "../pages/admin/UsersPage";
 import ReportsPage from "../pages/admin/ReportsPage";
 import SettingsPage from "../pages/admin/SettingsPage";
@@ -24,6 +24,7 @@ import RequestsPage from "../pages/RequestsPage";
 import NotificationsPage from "../pages/NotificationsPage";
 import SmartBin from "../modules/smart-bin/pages/SmartBin";
 import ManagePayment from "../modules/payment/pages/ManagePayment";
+import { LoginScreen, RegisterScreen } from "../modules/auth/screens";
 
 const App = () => {
   return (
@@ -31,10 +32,13 @@ const App = () => {
       <BrowserRouter>
         <Toaster position="top-right" />
         <Routes>
-          {/* Public routes */}
+          {/* Auth first: make / route go to login */}
+          <Route path="/login" element={<LoginScreen />} />
+          <Route path="/register" element={<RegisterScreen />} />
+          <Route path="/" element={<Navigate to="/login" replace />} />
+          {/* App routes under the user layout */}
           <Route path="/" element={<UserLayout />}>
-            {/* Home page as default landing */}
-            <Route index element={<HomePage />} />
+            <Route path="home" element={<HomePage />} />
             <Route path="home" element={<HomePage />} />
             <Route path="policies">
               <Route index element={<PolicyAdminPage />} />
@@ -86,7 +90,6 @@ const App = () => {
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/requests" element={<RequestsPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
-          <Route path="/login" element={<LoginPage />} />
         </Routes>
       </BrowserRouter>
     </ErrorBoundary>

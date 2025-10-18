@@ -7,7 +7,7 @@ import rateLimit from "express-rate-limit";
 import { errorHandler } from "./middleware/errorHandler";
 import { metricsMiddleware } from "./middleware/metricsMiddleware";
 import policiesRouter from "./modules/policies/policy.routes";
-import authRoutes from "./modules/auth/auth.routes";
+import authRoutes from "./modules/auth/routes/auth.routes";
 
 const app: Application = express();
 
@@ -23,7 +23,7 @@ app.use(
       if (origin === allowedOrigin) return callback(null, true);
       return callback(new Error("CORS policy: Origin not allowed"), false);
     },
-    credentials: true
+    credentials: true,
   })
 );
 app.use(morgan("dev"));

@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { AuthService } from "./auth.service";
+import { AuthService } from "../services/auth.service";
 
 export class AuthController {
   private authService: AuthService;
@@ -12,7 +12,17 @@ export class AuthController {
     try {
       const { username, password, role } = req.body;
       const user = await this.authService.register(username, password, role);
-      res.status(201).json({ message: "User created", user: { id: user._id, username: user.username, role: user.role } });
+      const generatedId =
+        user.residentId || user.collectorId || user.authorityId || user.adminId;
+      res.status(201).json({
+        message: "User created",
+        user: {
+          id: user._id,
+          username: user.username,
+          role: user.role,
+          generatedId,
+        },
+      });
     } catch (err: any) {
       res.status(400).json({ message: err.message });
     }

@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { UserRepository } from "./user.repository";
-import { IUser } from "./user.model";
+import { UserRepository } from "../repositories/user.repository";
+import { IUser } from "../models/user.model";
 
 export class AuthService {
   private userRepository: UserRepository;
@@ -10,14 +10,39 @@ export class AuthService {
     this.userRepository = new UserRepository();
   }
 
+  private generateRoleId(role: IUser["role"]) {
+    const prefixMap: Record<IUser["role"], string> = {
+      admin: "ADM",
+      authority: "AUTH",
+      collector: "COL",
+      resident: "RES",
+    };
+    const prefix = prefixMap[role];
+    const randomPart = Math.floor(10000 + Math.random() * 90000);
+    return `${prefix}-${randomPart}`;
+  }
+
   async register(username: string, password: string, role: IUser["role"]) {
-    // disallow creating admin via public register - admin is managed separately
     if (role === "admin") throw new Error("Cannot register admin user");
 
     const existing = await this.userRepository.findByUsername(username);
     if (existing) throw new Error("Username already exists");
+
     const hashedPassword = await bcrypt.hash(password, 10);
-    return this.userRepository.create({ username, password: hashedPassword, role });
+    const roleId = this.generateRoleId(role);
+
+    const userData: Partial<IUser> = {
+      username,
+      password: hashedPassword,
+      role,
+    };
+
+    if (role === "resident") userData.residentId = roleId;
+    if (role === "collector") userData.collectorId = roleId;
+    if (role === "authority") userData.authorityId = roleId;
+
+    const user = await this.userRepository.create(userData);
+    return user;
   }
 
   async login(username: string, password: string) {
@@ -28,7 +53,11 @@ export class AuthService {
     if (username === envAdminUser) {
       // validate against ENV password (no DB lookup required)
       if (password !== envAdminPass) throw new Error("Invalid password");
-      const token = jwt.sign({ id: "admin", role: "admin" }, process.env.JWT_SECRET || "defaultsecret", { expiresIn: "1h" });
+      const token = jwt.sign(
+        { id: "admin", role: "admin" },
+        process.env.JWT_SECRET || "defaultsecret",
+        { expiresIn: "1h" }
+      );
       return { token, role: "admin", username: envAdminUser };
     }
 
@@ -45,6 +74,15 @@ export class AuthService {
       { expiresIn: "1h" }
     );
 
-    return { token, role: user.role, username: user.username };
+    const idField =
+      user.role === "resident"
+        ? user.residentId
+        : user.role === "collector"
+        ? user.collectorId
+        : user.role === "authority"
+        ? user.authorityId
+        : user.adminId;
+
+    return { token, role: user.role, username: user.username, idField };
   }
 }
