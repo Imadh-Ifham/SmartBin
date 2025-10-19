@@ -12,7 +12,8 @@ export const generateInvoice = async (req: Request, res: Response) => {
     try {
       console.info("[INVOICE_CREATED]", {
         invoiceId: (invoice as any)?._id?.toString?.() ?? (invoice as any)?._id,
-        userId: (invoice as any)?.userId?.toString?.() ?? (invoice as any)?.userId,
+        userId:
+          (invoice as any)?.userId?.toString?.() ?? (invoice as any)?.userId,
         amount: invoice.amount,
         reason: invoice.reason,
         status: invoice.status,
