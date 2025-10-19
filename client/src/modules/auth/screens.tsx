@@ -12,9 +12,8 @@ export const LoginScreen = () => {
       onLogin={async (credentials) => {
         try {
           const res = await login.mutateAsync(credentials);
-          toast.success(
-            `Login successful. Welcome back, ${res.user.username}!`
-          );
+          const display = res.user.fullName || res.user.username;
+          toast.success(`Login successful. Welcome back, ${display}!`);
           navigate("/home");
         } catch (e: any) {
           const msg =
@@ -35,13 +34,8 @@ export const RegisterScreen = () => {
       onRegister={async (data) => {
         try {
           const res = await register.mutateAsync(data);
-          const idMsg =
-            res.user.residentId || res.user.collectorId || res.user.authorityId;
-          toast.success(
-            idMsg
-              ? `Registration successful. Your ID: ${idMsg}`
-              : "Registration successful. Account created!"
-          );
+          const display = res.user.fullName || res.user.username;
+          toast.success(`Registration successful. Welcome, ${display}!`);
           navigate("/home");
         } catch (e: any) {
           const msg = e?.response?.data?.message || "Please try again.";

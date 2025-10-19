@@ -26,6 +26,9 @@ export async function apiLogin(data: LoginCredentials): Promise<AuthResponse> {
 export async function apiRegister(data: RegisterData): Promise<AuthResponse> {
   const payload = {
     username: data.username,
+    email: data.email,
+    fullName: data.fullName,
+    phoneNumber: data.phoneNumber,
     password: data.password,
     role: data.role,
   };

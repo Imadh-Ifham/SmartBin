@@ -10,8 +10,16 @@ export class AuthController {
 
   register = async (req: Request, res: Response) => {
     try {
-      const { username, password, role } = req.body;
-      const result = await this.authService.register(username, password, role);
+      const { username, email, fullName, phoneNumber, password, role } =
+        req.body;
+      const result = await this.authService.register(
+        username,
+        email,
+        fullName,
+        phoneNumber,
+        password,
+        role
+      );
       res
         .cookie("refreshToken", result.refreshToken, {
           httpOnly: true,
@@ -24,7 +32,6 @@ export class AuthController {
         .json({
           accessToken: result.accessToken,
           user: result.user,
-          generatedId: result.generatedId,
         });
     } catch (err: any) {
       res.status(400).json({ message: err.message });
@@ -33,8 +40,8 @@ export class AuthController {
 
   login = async (req: Request, res: Response) => {
     try {
-      const { username, password } = req.body;
-      const result = await this.authService.login(username, password);
+      const { email, password } = req.body;
+      const result = await this.authService.login(email, password);
       // Issue refresh token cookie and return accessToken + user
       res
         .cookie("refreshToken", result.refreshToken, {
@@ -63,7 +70,9 @@ export class AuthController {
 
   refresh = async (req: Request, res: Response) => {
     try {
-      const refreshToken = req.cookies?.refreshToken as string | undefined;
+      const refreshToken =
+        (req.cookies?.refreshToken as string | undefined) ||
+        (req.body?.refreshToken as string | undefined);
       if (!refreshToken)
         return res.status(404).json({ message: "No refresh token" });
       const accessToken = await this.authService.refresh(refreshToken);

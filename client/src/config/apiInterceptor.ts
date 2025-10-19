@@ -36,8 +36,17 @@ export function setupResponseInterceptor() {
     async (error: AxiosError) => {
       const originalRequest = error.config as any;
 
+      const url = (originalRequest?.url as string) || "";
+      const isAuthEndpoint = /\/auth\/(login|register|refresh|logout)$/i.test(
+        url
+      );
+
       // Handle 401 (Unauthorized)
-      if (error.response?.status === 401 && !originalRequest._retry) {
+      if (
+        error.response?.status === 401 &&
+        !originalRequest._retry &&
+        !isAuthEndpoint
+      ) {
         if (isRefreshing) {
           // Queue request while refreshing
           return new Promise((resolve, reject) => {
@@ -105,7 +114,12 @@ export function setupRequestInterceptor() {
       config.requestId = Math.random().toString(36).substr(2, 9);
 
       // Add token if available (in-memory)
-      const token = tokenStore.get();
+      let token = tokenStore.get();
+      if (!token && typeof window !== "undefined") {
+        try {
+          token = localStorage.getItem("token");
+        } catch {}
+      }
       if (token && config.headers) {
         config.headers.Authorization = `Bearer ${token}`;
       }

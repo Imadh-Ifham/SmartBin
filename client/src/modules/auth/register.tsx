@@ -1,6 +1,8 @@
 import { useState } from "react";
 import {
   User,
+  Mail,
+  Phone,
   Lock,
   Recycle,
   Home,
@@ -31,6 +33,9 @@ export function RegisterPage({
   onSwitchToLogin,
 }: RegisterPageProps) {
   const [username, setUsername] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [role, setRole] = useState<UserRole>("resident");
@@ -41,6 +46,18 @@ export function RegisterPage({
 
     if (username.length < 3) {
       newErrors.username = "Username must be at least 3 characters";
+    }
+
+    if (fullName.length < 2) {
+      newErrors.fullName = "Full name must be at least 2 characters";
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      newErrors.email = "Please enter a valid email";
+    }
+
+    if (!/^\+?[0-9\-\s]{7,15}$/.test(phoneNumber)) {
+      newErrors.phoneNumber = "Please enter a valid phone number";
     }
 
     if (password.length < 6) {
@@ -59,7 +76,15 @@ export function RegisterPage({
     e.preventDefault();
 
     if (validateForm()) {
-      onRegister({ username, password, confirmPassword, role });
+      onRegister({
+        username,
+        email,
+        fullName,
+        phoneNumber,
+        password,
+        confirmPassword,
+        role,
+      });
     }
   };
 
@@ -141,7 +166,73 @@ export function RegisterPage({
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Username field */}
+            {/* Full Name */}
+            <div>
+              <Label htmlFor="fullName">Full Name</Label>
+              <div className="relative mt-2">
+                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Input
+                  id="fullName"
+                  type="text"
+                  placeholder="Your full name"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className="pl-10"
+                  required
+                />
+              </div>
+              {errors.fullName && (
+                <p className="text-red-600 mt-1" style={{ fontSize: "13px" }}>
+                  {errors.fullName}
+                </p>
+              )}
+            </div>
+
+            {/* Email */}
+            <div>
+              <Label htmlFor="email">Email</Label>
+              <div className="relative mt-2">
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="pl-10"
+                  required
+                />
+              </div>
+              {errors.email && (
+                <p className="text-red-600 mt-1" style={{ fontSize: "13px" }}>
+                  {errors.email}
+                </p>
+              )}
+            </div>
+
+            {/* Phone Number */}
+            <div>
+              <Label htmlFor="phoneNumber">Phone Number</Label>
+              <div className="relative mt-2">
+                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Input
+                  id="phoneNumber"
+                  type="tel"
+                  placeholder="e.g. +94 71 123 4567"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  className="pl-10"
+                  required
+                />
+              </div>
+              {errors.phoneNumber && (
+                <p className="text-red-600 mt-1" style={{ fontSize: "13px" }}>
+                  {errors.phoneNumber}
+                </p>
+              )}
+            </div>
+
+            {/* Username */}
             <div>
               <Label htmlFor="username">Username</Label>
               <div className="relative mt-2">

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { User, Lock, Recycle } from "lucide-react";
+import { Mail, Lock, Recycle } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -12,13 +12,13 @@ interface LoginPageProps {
 }
 
 export function LoginPage({ onLogin, onSwitchToRegister }: LoginPageProps) {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onLogin({ username, password, rememberMe });
+    onLogin({ email, password, rememberMe });
   };
 
   return (
@@ -71,17 +71,17 @@ export function LoginPage({ onLogin, onSwitchToRegister }: LoginPageProps) {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Username field */}
+            {/* Email field */}
             <div>
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="email">Email</Label>
               <div className="relative mt-2">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <Input
-                  id="username"
-                  type="text"
-                  placeholder="Enter your username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="pl-10"
                   required
                 />
