@@ -42,4 +42,14 @@ export class InvoiceRepository {
       createdAt: { $gte: since },
     }).exec();
   }
+
+  async findAllByUser(
+    userId: string | Types.ObjectId,
+    status?: IInvoice["status"]
+  ) {
+    const id = typeof userId === "string" ? new Types.ObjectId(userId) : userId;
+    const query: any = { userId: id };
+    if (status) query.status = status;
+    return await InvoiceModel.find(query).sort({ createdAt: -1 }).lean().exec();
+  }
 }

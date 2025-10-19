@@ -6,6 +6,8 @@ import { CreateInvoiceSchema } from "../types/invoice.dto";
 import {
   generateInvoice,
   getUnpaidStatus,
+  getMyInvoices,
+  getInvoicesByUser,
 } from "../controllers/invoice.controller";
 
 const router = Router();
@@ -19,5 +21,15 @@ router.post(
 );
 
 router.get("/status/:userId", authenticate, verifyAuthority, getUnpaidStatus);
+
+// Resident: view their own invoices
+router.get("/me/invoices", authenticate, getMyInvoices);
+// Admin/Authority/Collector: view any user's invoices
+router.get(
+  "/:userId/invoices",
+  authenticate,
+  verifyAuthority,
+  getInvoicesByUser
+);
 
 export default router;
