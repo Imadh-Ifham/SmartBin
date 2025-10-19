@@ -9,34 +9,40 @@ const ERROR_MESSAGES = {
   VALIDATION_FAILED: "Validation failed",
   SERVER_ERROR: "Server error",
   INVALID_ID: "Invalid id",
-  POLICY_NOT_FOUND: "Policy not found"
+  POLICY_NOT_FOUND: "Policy not found",
 };
-
-export interface FeedbackDateSchemaCtx {
-  addIssue: (issue: { code: string; message: string }) => void;
-}
 
 export const feedbackDateSchema = z
   .union([z.string(), z.date()])
-  .transform((value: string | Date, ctx: FeedbackDateSchemaCtx) => {
+  .transform((value: string | Date, ctx: any) => {
     if (value instanceof Date) return value;
     const normalized = value.trim();
     if (!normalized) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Invalid date" });
+      (ctx.addIssue as any)({
+        code: z.ZodIssueCode.custom,
+        message: "Invalid date",
+      });
       return z.NEVER;
     }
     const parsed = new Date(normalized);
     if (Number.isNaN(parsed.getTime())) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Invalid date" });
+      (ctx.addIssue as any)({
+        code: z.ZodIssueCode.custom,
+        message: "Invalid date",
+      });
       return z.NEVER;
     }
     return parsed;
   });
 
 export const feedbackSchema = z.object({
-  stakeholderType: z.enum([STAKEHOLDER_TYPES.RESIDENT, STAKEHOLDER_TYPES.BUSINESS, STAKEHOLDER_TYPES.STAFF]),
+  stakeholderType: z.enum([
+    STAKEHOLDER_TYPES.RESIDENT,
+    STAKEHOLDER_TYPES.BUSINESS,
+    STAKEHOLDER_TYPES.STAFF,
+  ]),
   message: z.string().trim().min(1, "Feedback message is required").optional(),
-  date: feedbackDateSchema.optional()
+  date: feedbackDateSchema.optional(),
 });
 
 /**
@@ -51,14 +57,16 @@ export const baseSchema = z.object({
     (v) => (typeof v === "string" || v instanceof Date ? new Date(v) : v),
     z.date()
   ),
-  status: z.enum(["Draft", "UnderReview", "Active", "Retired", "Archived"]).optional(),
+  status: z
+    .enum(["Draft", "UnderReview", "Active", "Retired", "Archived"])
+    .optional(),
   complianceStatus: z.enum(["Compliant", "NonCompliant", "Pending"]).optional(),
   lastReviewedBy: z
     .string()
     .regex(/^[a-fA-F0-9]{24}$/, "lastReviewedBy must be a valid ObjectId")
     .optional(),
   feedback: z.array(feedbackSchema).optional(),
-  issues: z.array(z.string().min(1)).optional()
+  issues: z.array(z.string().min(1)).optional(),
 });
 
 export const createSchema = baseSchema;
@@ -67,14 +75,20 @@ export const updateSchema = baseSchema.partial();
 /**
  * Utility for standardized error responses
  */
-export const sendError = (res: Response, code: number, message: string, details?: any) =>
-  res.status(code).json({ error: message, details });
+export const sendError = (
+  res: Response,
+  code: number,
+  message: string,
+  details?: any
+) => res.status(code).json({ error: message, details });
 
 export const extractUserId = (req: Request): string | undefined =>
   (req as any).user?.id || (req as any).user?._id || undefined;
 
-export const buildServiceOptions = (userId: string | undefined): ServiceOptions => ({
-  ...(userId && { userId })
+export const buildServiceOptions = (
+  userId: string | undefined
+): ServiceOptions => ({
+  ...(userId && { userId }),
 });
 
 /**
@@ -91,9 +105,12 @@ export class PolicyControllerClass {
         { ...(payload as PolicyCreateDTO) },
         options
       );
-      return res.status(201).json({ message: "Policy created successfully", policy });
+      return res
+        .status(201)
+        .json({ message: "Policy created successfully", policy });
     } catch (e: any) {
-      if (e instanceof z.ZodError) return sendError(res, 400, ERROR_MESSAGES.VALIDATION_FAILED, e.issues);
+      if (e instanceof z.ZodError)
+        return sendError(res, 400, ERROR_MESSAGES.VALIDATION_FAILED, e.issues);
       return sendError(res, 500, ERROR_MESSAGES.SERVER_ERROR);
     }
   };
@@ -102,7 +119,8 @@ export class PolicyControllerClass {
   public get = async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      if (typeof id !== "string") return sendError(res, 400, ERROR_MESSAGES.INVALID_ID);
+      if (typeof id !== "string")
+        return sendError(res, 400, ERROR_MESSAGES.INVALID_ID);
 
       const policy = await PolicyService.get(id);
       if (!policy) return sendError(res, 404, ERROR_MESSAGES.POLICY_NOT_FOUND);
@@ -117,10 +135,12 @@ export class PolicyControllerClass {
   public versions = async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      if (typeof id !== "string") return sendError(res, 400, ERROR_MESSAGES.INVALID_ID);
+      if (typeof id !== "string")
+        return sendError(res, 400, ERROR_MESSAGES.INVALID_ID);
 
       const versions = await (PolicyService as any).versions?.(id);
-      if (!versions) return sendError(res, 404, ERROR_MESSAGES.POLICY_NOT_FOUND);
+      if (!versions)
+        return sendError(res, 404, ERROR_MESSAGES.POLICY_NOT_FOUND);
       return res.json({ count: versions.length, versions });
     } catch {
       return sendError(res, 500, ERROR_MESSAGES.SERVER_ERROR);
@@ -131,7 +151,8 @@ export class PolicyControllerClass {
   public audit = async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      if (typeof id !== "string") return sendError(res, 400, ERROR_MESSAGES.INVALID_ID);
+      if (typeof id !== "string")
+        return sendError(res, 400, ERROR_MESSAGES.INVALID_ID);
 
       const audit = await (PolicyService as any).audit?.(id);
       if (!audit) return sendError(res, 404, ERROR_MESSAGES.POLICY_NOT_FOUND);
@@ -151,7 +172,8 @@ export class PolicyControllerClass {
       if (typeof category === "string") query.category = category;
       if (typeof ministry === "string") query.ministry = ministry;
       if (typeof status === "string") query.status = status;
-      if (typeof complianceStatus === "string") query.complianceStatus = complianceStatus;
+      if (typeof complianceStatus === "string")
+        query.complianceStatus = complianceStatus;
 
       const policies = await PolicyService.list(query);
       return res.json({ count: policies.length, policies });
@@ -165,7 +187,8 @@ export class PolicyControllerClass {
     try {
       const payload = updateSchema.parse(req.body);
       const { id } = req.params;
-      if (typeof id !== "string") return sendError(res, 400, ERROR_MESSAGES.INVALID_ID);
+      if (typeof id !== "string")
+        return sendError(res, 400, ERROR_MESSAGES.INVALID_ID);
 
       const userId = extractUserId(req);
       const options = buildServiceOptions(userId);
@@ -176,9 +199,13 @@ export class PolicyControllerClass {
       );
       if (!updated) return sendError(res, 404, ERROR_MESSAGES.POLICY_NOT_FOUND);
 
-      return res.json({ message: "Policy updated successfully", policy: updated });
+      return res.json({
+        message: "Policy updated successfully",
+        policy: updated,
+      });
     } catch (e: any) {
-      if (e instanceof z.ZodError) return sendError(res, 400, ERROR_MESSAGES.VALIDATION_FAILED, e.issues);
+      if (e instanceof z.ZodError)
+        return sendError(res, 400, ERROR_MESSAGES.VALIDATION_FAILED, e.issues);
       return sendError(res, 500, ERROR_MESSAGES.SERVER_ERROR);
     }
   };
@@ -187,14 +214,19 @@ export class PolicyControllerClass {
   public approve = async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      if (typeof id !== "string") return sendError(res, 400, ERROR_MESSAGES.INVALID_ID);
+      if (typeof id !== "string")
+        return sendError(res, 400, ERROR_MESSAGES.INVALID_ID);
 
       const userId = extractUserId(req);
       const options = buildServiceOptions(userId);
       const approved = await PolicyService.approve(id, options);
-      if (!approved) return sendError(res, 404, ERROR_MESSAGES.POLICY_NOT_FOUND);
+      if (!approved)
+        return sendError(res, 404, ERROR_MESSAGES.POLICY_NOT_FOUND);
 
-      return res.json({ message: "Policy approved successfully", policy: approved });
+      return res.json({
+        message: "Policy approved successfully",
+        policy: approved,
+      });
     } catch {
       return sendError(res, 500, ERROR_MESSAGES.SERVER_ERROR);
     }
@@ -208,16 +240,21 @@ export class PolicyControllerClass {
         .object({ issue: z.string().min(3, "Issue description required") })
         .parse(req.body);
 
-      if (typeof id !== "string") return sendError(res, 400, ERROR_MESSAGES.INVALID_ID);
+      if (typeof id !== "string")
+        return sendError(res, 400, ERROR_MESSAGES.INVALID_ID);
 
       const userId = extractUserId(req);
       const options = buildServiceOptions(userId);
       const updated = await PolicyService.markIssue(id, issue, options);
       if (!updated) return sendError(res, 404, ERROR_MESSAGES.POLICY_NOT_FOUND);
 
-      return res.json({ message: "Issue recorded successfully", policy: updated });
+      return res.json({
+        message: "Issue recorded successfully",
+        policy: updated,
+      });
     } catch (e: any) {
-      if (e instanceof z.ZodError) return sendError(res, 400, ERROR_MESSAGES.VALIDATION_FAILED, e.issues);
+      if (e instanceof z.ZodError)
+        return sendError(res, 400, ERROR_MESSAGES.VALIDATION_FAILED, e.issues);
       return sendError(res, 500, ERROR_MESSAGES.SERVER_ERROR);
     }
   };
@@ -227,11 +264,16 @@ export class PolicyControllerClass {
     try {
       const { id } = req.params;
       const { stakeholderGroups, message } = req.body as FeedbackRequest;
-      if (typeof id !== "string") return sendError(res, 400, ERROR_MESSAGES.INVALID_ID);
+      if (typeof id !== "string")
+        return sendError(res, 400, ERROR_MESSAGES.INVALID_ID);
 
       const userId = extractUserId(req);
       const options = buildServiceOptions(userId);
-      const result = await (PolicyService as any).requestFeedback?.(id, { stakeholderGroups, message }, options);
+      const result = await (PolicyService as any).requestFeedback?.(
+        id,
+        { stakeholderGroups, message },
+        options
+      );
       if (!result) return sendError(res, 404, ERROR_MESSAGES.POLICY_NOT_FOUND);
       return res.json({ message: "Feedback requested", result });
     } catch (e: any) {
@@ -243,7 +285,8 @@ export class PolicyControllerClass {
   public remove = async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      if (typeof id !== "string") return sendError(res, 400, ERROR_MESSAGES.INVALID_ID);
+      if (typeof id !== "string")
+        return sendError(res, 400, ERROR_MESSAGES.INVALID_ID);
 
       const deleted = await PolicyService.remove(id);
       if (!deleted) return sendError(res, 404, ERROR_MESSAGES.POLICY_NOT_FOUND);
@@ -258,18 +301,22 @@ export class PolicyControllerClass {
   public revalidateCompliance = async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      if (typeof id !== "string") return sendError(res, 400, ERROR_MESSAGES.INVALID_ID);
+      if (typeof id !== "string")
+        return sendError(res, 400, ERROR_MESSAGES.INVALID_ID);
 
       const userId = extractUserId(req);
       const options = buildServiceOptions(userId);
-      const result = await (PolicyService as any).revalidateCompliance(id, options);
+      const result = await (PolicyService as any).revalidateCompliance(
+        id,
+        options
+      );
       if (!result) return sendError(res, 404, ERROR_MESSAGES.POLICY_NOT_FOUND);
 
       return res.json({
         message: "Compliance revalidated successfully",
         policy: result.policy,
         complianceResult: result.complianceResult,
-        statusChanged: result.statusChanged
+        statusChanged: result.statusChanged,
       });
     } catch (e: any) {
       return sendError(res, 500, ERROR_MESSAGES.SERVER_ERROR);
