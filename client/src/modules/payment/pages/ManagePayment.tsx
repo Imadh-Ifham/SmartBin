@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Toaster, toast } from "react-hot-toast";
 import { DashboardLayout } from "../components/DashboardLayout";
 import { BillingDashboard } from "../components/BillingDashboard";
@@ -85,6 +85,13 @@ const ManagePayment = () => {
     setSelectedInvoice(null);
     setCurrentPayment(null);
   };
+
+  // If we leave checkout/success/failure, ensure refund dialog is closed
+  useEffect(() => {
+    if (currentScreen !== "dashboard" && refundDialogOpen) {
+      setRefundDialogOpen(false);
+    }
+  }, [currentScreen]);
 
   const handleRefundRequest = (_reason: string, _attachment?: File) => {
     toast.success("Refund Request Submitted");
