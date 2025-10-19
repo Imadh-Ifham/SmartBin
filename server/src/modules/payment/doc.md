@@ -58,10 +58,56 @@ sequenceDiagram
 1. `server/src/modules/payment/models/invoice.model.ts`
 
 - Created/ensured model with:
+
+---
+
+## Testing (unit + integration)
+
+Tooling: Jest + ts-jest (already configured), `mongodb-memory-server` for ephemeral Mongo, and `supertest` to hit Express without a real network port.
+
+Recommended layout (mirrors existing `smart-bin/tests`):
+
+- Unit: `server/src/modules/payment/tests/invoice.service.test.ts`
+- Integration: `server/src/modules/payment/tests/invoice.routes.int.test.ts`
+
+You can run all tests with:
+
+````powershell
   - `userId: Types.ObjectId` (ref `User`, required, indexed)
   - `amount: number` (required)
+
+If you prefer watch mode:
+
+```powershell
   - `reason: string` (required, indexed)
   - `status: "Pending" | "Paid" | "Partially Paid" | "Refunded"` (indexed)
+
+### Unit tests — `InvoiceService.createInvoice`
+
+We focus on business logic by mocking the repository and user lookups. We also stub the audit service so tests don’t spam stdout.
+
+Cases to cover:
+
+1) Success path
+- Mocks:
+  - `userRepo.findById` → returns a user
+  - `repo.findRecentPendingByUserAndReason` → returns `null` (no duplicate)
+  - `repo.create` → returns a new invoice object `{ _id, userId, amount, reason, status: "Pending", createdAt }`
+  - `audit.log` → jest.fn()
+- Assert: `createInvoice` returns the invoice; audit called with `INVOICE_CREATED`.
+
+2) User not found → throws
+- `userRepo.findById` → returns `null`
+- Assert: `await expect(service.createInvoice(...)).rejects.toThrow("User not found")`
+
+3) Duplicate detection → throws
+- `userRepo.findById` → returns a user
+- `repo.findRecentPendingByUserAndReason` → returns a pending invoice (simulate within 5 min)
+- Assert: rejects with "Duplicate invoice detected"
+
+Sample structure:
+
+```ts
   - `metadata?: Mixed`, `dueDate?: Date`
   - timestamps; compound index `{ userId, reason, status, createdAt }` for quick dedupe/status queries.
 
@@ -113,11 +159,9 @@ sequenceDiagram
   - POST `/generateInvoice` with `authenticate`, `verifyAuthority`, `validateRequest({ body: CreateInvoiceSchema })` → `generateInvoice`.
   - GET `/status/:userId` with `authenticate`, `verifyAuthority` → `getUnpaidStatus`.
 
-8. `server/src/middleware/verifyAuthority.ts`
 
 - Extended roles to allow `admin`, `authority`, and `collector` to access protected payment endpoints.
 
-9. `server/src/app.ts`
 
 - Mounted the new payments router: `app.use("/api/payments", paymentsRouter);` which points to `invoice.routes.ts`.
 - Includes standard middleware: JSON, cookies, CORS with `credentials: true`, metrics, rate limit, helmet, compression, and dev auth shim.
@@ -201,50 +245,29 @@ Server dev:
 
 ```powershell
 # from server folder
-npm install
-npm run build
-npm start
 # or for live dev
 npm run dev
-```
+````
 
-Example request (after authenticating and with a role allowed by `verifyAuthority`):
-
-```http
 POST /api/payments/generateInvoice
 Content-Type: application/json
-
-{
-  "userId": "64d2b9d9e7f5f93b9e6a1234",
-  "amount": 1200,
-  "reason": "Overweight waste"
+"amount": 1200,
+"reason": "Overweight waste"
 }
-```
 
 Expected 201 response body (shape):
-
-```json
 {
-  "invoiceId": "...",
-  "userId": "...",
-  "amount": 1200,
-  "reason": "Overweight waste",
-  "status": "Pending",
-  "createdAt": "2025-10-19T..."
-}
-```
+"invoiceId": "...",
+"status": "Pending",
+"createdAt": "2025-10-19T..."
 
 Status summary:
-
-```http
 GET /api/payments/status/64d2b9d9e7f5f93b9e6a1234
-```
 
-Returns:
-
+````
 ```json
 { "count": 2, "total": 2400 }
-```
+````
 
 ---
 
