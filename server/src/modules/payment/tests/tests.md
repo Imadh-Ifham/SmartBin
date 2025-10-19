@@ -19,6 +19,7 @@ This guide explains what we test for the Payment Invoice flow, how to run tests 
     - With invalid userId → 400
     - Duplicate within 5 minutes → 400
   - GET `/api/payments/status/:userId` → returns `{ count, total }`
+  - GET `/api/payments/me/invoices` → returns list of invoices for the logged-in resident
 
 ## Where the tests live
 
@@ -86,6 +87,8 @@ PASS  src/modules/payment/tests/invoice.service.test.ts
 		helpers
 			✓ calculateOverweight returns excess and fee
 			✓ applyDiscount clamps and computes totals
+		getInvoicesByUserId
+			✓ returns list of invoices mapped with id
 ```
 
 - Coverage usually shows `invoice.service.ts` at or near 100%.
@@ -111,6 +114,7 @@ PASS  src/modules/payment/tests/invoice.routes.int.test.ts
 		✓ POST /generateInvoice with resident token => 403
 		✓ POST /generateInvoice with invalid userId => 400
 		✓ GET /status/:userId returns unpaid summary => 200
+		✓ GET /me/invoices returns invoices for logged-in resident => 200
 ```
 
 ## One-time setup notes
@@ -139,6 +143,8 @@ npm i -D supertest @types/supertest
 - POST again with same `userId+reason` within 5 minutes → expect `400 Duplicate invoice detected`.
 - POST with `resident` token → expect `403`.
 - GET `/api/payments/status/<residentId>` with `authority` token → expect `{ count, total }`.
+- GET `/api/payments/me/invoices` with `resident` token → expect an array of invoices with
+  `{ id, amount, reason, status: "Pending|Paid|Partially Paid|Refunded", createdAt, dueDate? }`.
 
 ## Why this design
 
