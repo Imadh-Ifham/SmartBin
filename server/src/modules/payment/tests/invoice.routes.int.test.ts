@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import { MongoMemoryServer } from "mongodb-memory-server";
 import app from "../../../app";
 import { UserModel } from "../../auth/models/user.model";
+import { InvoiceModel } from "../models/invoice.model";
 
 /**
  * Integration tests for payment invoice routes using in-memory MongoDB.
@@ -190,5 +191,45 @@ describe("/api/payments (integration)", () => {
     );
     expect(statusRes.body.count).toBeGreaterThanOrEqual(1);
     expect(statusRes.body.total).toBeGreaterThanOrEqual(1250);
+  });
+
+  it("GET /me/invoices returns invoices for logged-in resident", async () => {
+    const resident = await UserModel.create({
+      username: "resident5",
+      email: "resident5@example.com",
+      password: "hashed",
+      role: "resident",
+      fullName: "Resident Five",
+      phoneNumber: "+94000000004",
+    } as any);
+
+    // Issue a resident token
+    const residentToken = signToken({
+      id: resident._id.toString(),
+      role: "resident",
+    });
+
+    // Seed one invoice tied to the resident
+    await InvoiceModel.create({
+      userId: resident._id,
+      amount: 500,
+      reason: "Test",
+      status: "Pending",
+    } as any);
+
+    const res = await request(app)
+      .get(`/api/payments/me/invoices`)
+      .set("Authorization", `Bearer ${residentToken}`);
+
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body.length).toBeGreaterThanOrEqual(1);
+    expect(res.body[0]).toEqual(
+      expect.objectContaining({
+        amount: 500,
+        reason: "Test",
+        status: "Pending",
+      })
+    );
   });
 });
