@@ -2,11 +2,6 @@ import { smartBinRepository } from "../repositories/smartBin.repository";
 import type { IBin } from "../models/smartBin.model";
 import { Types } from "mongoose";
 
-export interface MaintenanceOptions {
-  performedBy?: string;
-  notes?: string;
-}
-
 export class SmartBinService {
   constructor(private repo = smartBinRepository) {}
 
@@ -47,32 +42,6 @@ export class SmartBinService {
       bin.status = "InMaintenance";
     }
     return this.repo.update(bin);
-  }
-
-  async startMaintenance(id: string, options?: MaintenanceOptions) {
-    const bin: any = await this.repo.findById(id);
-    if (!bin) return null;
-    bin.status = "InMaintenance";
-    bin.metadata = {
-      ...(bin.metadata || {}),
-      maintenance: { startedAt: new Date(), ...options },
-    };
-    return this.repo.update(bin);
-  }
-
-  async finishMaintenance(id: string, options?: MaintenanceOptions) {
-    const bin: any = await this.repo.findById(id);
-    if (!bin) return null;
-    bin.status = "Active";
-    bin.metadata = {
-      ...(bin.metadata || {}),
-      maintenance: { finishedAt: new Date(), ...options },
-    };
-    return this.repo.update(bin);
-  }
-
-  async addOrUpdateType(name: string, description?: string) {
-    return this.repo.upsertType(name, description);
   }
 }
 

@@ -8,12 +8,12 @@ export interface IBin extends Document {
   type: Types.ObjectId; // reference to a bin type (keeps coupling low)
   currentWeight: number;
   limit: number;
+  address: string;
   location?: {
     type: "Point";
     coordinates: [number, number]; // [lng, lat]
   };
   status: BinStatus;
-  metadata?: Record<string, any>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -37,6 +37,7 @@ const BinSchema = new Schema<IBin>(
     },
     currentWeight: { type: Number, default: 0 },
     limit: { type: Number, default: 10 },
+    address: { type: String, default: "" },
     location: { type: GeoSchema },
     status: {
       type: String,
@@ -44,7 +45,6 @@ const BinSchema = new Schema<IBin>(
       default: "Active",
       index: true,
     },
-    metadata: { type: Schema.Types.Mixed, default: {} },
   },
   { timestamps: true, versionKey: false }
 );

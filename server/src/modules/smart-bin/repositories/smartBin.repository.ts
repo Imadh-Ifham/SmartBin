@@ -28,25 +28,6 @@ export class SmartBinRepository {
   async deleteById(id: string) {
     return Bin.findByIdAndDelete(id);
   }
-
-  async findNearby(lng: number, lat: number, radiusMeters: number = 500) {
-    return Bin.find({
-      location: {
-        $near: {
-          $geometry: { type: "Point", coordinates: [lng, lat] },
-          $maxDistance: radiusMeters,
-        },
-      },
-    }).limit(100);
-  }
-
-  async upsertType(name: string, description?: string) {
-    return BinType.findOneAndUpdate(
-      { name },
-      { name, description },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
-    );
-  }
 }
 
 export const smartBinRepository = new SmartBinRepository();
