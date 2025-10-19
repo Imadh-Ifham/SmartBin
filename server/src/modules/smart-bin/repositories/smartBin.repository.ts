@@ -1,5 +1,6 @@
-import { Bin, BinType, IBin } from "../models/smartBin.model";
-import mongoose, { Types } from "mongoose";
+import { BinType } from "../models/bin-type.model";
+import { Bin, IBin } from "../models/smartBin.model";
+import { Types } from "mongoose";
 
 export class SmartBinRepository {
   async find(query: any = {}) {

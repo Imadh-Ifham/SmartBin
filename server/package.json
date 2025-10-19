@@ -11,7 +11,8 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "test": "jest --coverage",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "test:smart-bin": "jest src/modules/smart-bin --coverage"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
