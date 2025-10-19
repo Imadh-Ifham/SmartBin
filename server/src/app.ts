@@ -9,6 +9,7 @@ import { errorHandler } from "./middleware/errorHandler";
 import { metricsMiddleware } from "./middleware/metricsMiddleware";
 import policiesRouter from "./modules/policies/policy.routes";
 import authRoutes from "./modules/auth/routes/auth.routes";
+import paymentsRouter from "./modules/payment/routes/invoice.routes";
 import { binTypeRoutes, binRoutes } from "./modules/smart-bin/routes";
 
 const app: Application = express();
@@ -54,6 +55,7 @@ if (process.env.DEV_AUTH === "true") {
 // Routes
 app.use("/api/policies", policiesRouter);
 app.use("/api/auth", authRoutes);
+app.use("/api/payments", paymentsRouter);
 app.use("/api/bin-types", binTypeRoutes);
 app.use("/api/bins", binRoutes);
 
