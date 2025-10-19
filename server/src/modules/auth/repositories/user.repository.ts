@@ -5,6 +5,10 @@ export class UserRepository {
     return UserModel.findOne({ username }).exec();
   }
 
+  async findByEmail(email: string): Promise<IUser | null> {
+    return UserModel.findOne({ email }).exec();
+  }
+
   async create(user: Partial<IUser>): Promise<IUser> {
     const newUser = new UserModel(user);
     return newUser.save();
