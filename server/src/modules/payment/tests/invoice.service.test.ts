@@ -19,6 +19,7 @@ describe("InvoiceService unit tests", () => {
     create: jest.fn(),
     findPendingByUser: jest.fn(),
     findRecentPendingByUserAndReason: jest.fn(),
+    findAllByUser: jest.fn(),
   } as any;
   const mockUserRepo = {
     findById: jest.fn(),
@@ -91,6 +92,39 @@ describe("InvoiceService unit tests", () => {
       ]);
       const out = await service.getUnpaidSummary("user-1");
       expect(out).toEqual({ count: 2, total: 1200 });
+    });
+  });
+
+  describe("getInvoicesByUserId", () => {
+    it("returns list of invoices mapped with id", async () => {
+      const mockInvoices = [
+        {
+          _id: "inv1",
+          amount: 100,
+          reason: "Overweight",
+          status: "Pending",
+          createdAt: new Date(),
+        },
+        {
+          _id: "inv2",
+          amount: 200,
+          reason: "Subscription",
+          status: "Paid",
+          createdAt: new Date(),
+        },
+      ];
+      mockRepo.findAllByUser.mockResolvedValue(mockInvoices);
+
+      const result = await (service as any).getInvoicesByUserId("user123");
+      expect(result).toHaveLength(2);
+      expect(result[0]).toHaveProperty("id", "inv1");
+      expect(result[0]).toEqual(
+        expect.objectContaining({
+          amount: 100,
+          reason: "Overweight",
+          status: "Pending",
+        })
+      );
     });
   });
 
