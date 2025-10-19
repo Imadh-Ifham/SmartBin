@@ -277,3 +277,151 @@ GET /api/payments/status/64d2b9d9e7f5f93b9e6a1234
 - Add idempotency keys for invoice creation across network retries.
 - Extend status endpoint to include detailed invoice list with pagination.
 - Introduce Strategy for payment processing and Observer for notifications when moving beyond Phase 1.
+
+---
+
+# Payment Module — Phase 2 Implementation Log (Invoice Viewing)
+
+Imagine a resident opening their dashboard to check what they owe and what they've already settled. They authenticate, and the app asks the backend for all invoices tied to their MongoDB `_id`. The server authenticates the request, extracts the user id from the JWT, and returns a clean, sorted list with just the essentials (amount, reason, status, timestamps). Operators like collectors or admins can also view a specific resident’s invoices for support or reporting.
+
+This phase adds read endpoints to list invoices for the logged-in resident and for a specific user, reusing our existing auth middleware and keeping the layering intact.
+
+## Phase 2 scope
+
+- Add endpoints under `/api/payments` for invoice viewing:
+  - GET `/me/invoices` (resident: list own invoices)
+  - GET `/:userId/invoices` (collector/authority/admin: list invoices of a given user)
+- Optional `?status=Pending|Paid|Partial|Refunded` filter.
+- Keep responses minimal for performance and pagination later.
+- Reuse `authenticate` and `verifyAuthority` where applicable.
+
+---
+
+## Compact sequence diagram (viewing)
+
+```mermaid
+sequenceDiagram
+  participant Client
+  participant Route as Route (invoice.routes.ts)
+  participant MW as Middleware (authenticate / verifyAuthority)
+  participant C as Controller (invoice.controller.ts)
+  participant S as Service (invoice.service.ts)
+  participant R as Repo (invoice.repository.ts)
+  participant M as Model (invoice.model.ts)
+
+  Note over Client: Resident views own invoices
+  Client->>Route: GET /api/payments/me/invoices
+  Route->>MW: authenticate
+  MW-->>C: req.user.id
+  C->>S: getInvoicesByUserId(userId, [status])
+  S->>R: findAllByUser(userId, [status])
+  R->>M: find({ userId, [status] }).sort(createdAt desc)
+  M-->>R: [invoices]
+  S-->>C: mapped minimal fields
+  C-->>Client: 200 [ { id, amount, reason, status, createdAt, dueDate } ]
+
+  Note over Client: Admin views a user's invoices
+  Client->>Route: GET /api/payments/:userId/invoices
+  Route->>MW: authenticate + verifyAuthority
+  MW-->>C: params.userId
+  C->>S: getInvoicesByUserId(params.userId, [status])
+  S->>R: findAllByUser(params.userId, [status])
+  R->>M: find({ userId, [status] }).sort(createdAt desc)
+  M-->>R: [invoices]
+  S-->>C: mapped minimal fields
+  C-->>Client: 200 [ ... ]
+```
+
+---
+
+## Files changed and what actually changed (Phase 2)
+
+1. `server/src/modules/payment/repositories/invoice.repository.ts`
+
+   - Added:
+     - `findAllByUser(userId, status?)`: converts string ids to `ObjectId`, applies optional status filter, sorts by `createdAt` descending, and uses `.lean()` for efficient reads.
+
+2. `server/src/modules/payment/services/invoice.service.ts`
+
+   - Added:
+     - `getInvoicesByUserId(userId, status?)`: calls repository method and maps documents to minimal projection `{ id, amount, reason, status, createdAt, dueDate }`.
+
+3. `server/src/modules/payment/controllers/invoice.controller.ts`
+
+   - Added:
+     - `getMyInvoices(req, res)`: extracts `(req as any).user.id` from JWT; supports optional `?status`.
+     - `getInvoicesByUser(req, res)`: reads `req.params.userId`; supports optional `?status`.
+
+4. `server/src/modules/payment/routes/invoice.routes.ts`
+
+   - Added routes:
+     - `GET /me/invoices` → `authenticate`, `getMyInvoices`.
+     - `GET /:userId/invoices` → `authenticate`, `verifyAuthority`, `getInvoicesByUser`.
+
+5. Model
+   - No change required; existing `userId` and `status` fields (and indexes) already support queries.
+
+---
+
+## Endpoints and contracts (Phase 2)
+
+1. GET `/api/payments/me/invoices`
+
+   - Auth: `authenticate` (resident)
+   - Query: `status?` one of `Pending|Paid|Partial|Refunded`
+   - Response: `200` array of invoices with minimal fields:
+     - `[ { id, amount, reason, status, createdAt, dueDate } ]`
+
+2. GET `/api/payments/:userId/invoices`
+   - Auth: `authenticate` + `verifyAuthority` (admin|authority|collector)
+   - Query: `status?` one of `Pending|Paid|Partial|Refunded`
+   - Response: same as above
+
+---
+
+## Step-by-step log (what we did and why)
+
+1. Repository: Implemented `findAllByUser` to encapsulate the common query/filter/sort logic, returning lean documents for speed.
+
+2. Service: Added `getInvoicesByUserId` to shape the data for the UI and to be the single entry point for both routes (resident and admin views).
+
+3. Controller: Added two handlers—one bound to the authenticated user id, the other bound to a path parameter—for clear separation and reuse of the service method.
+
+4. Routes: Wired endpoints with appropriate middlewares—residents can only access their own invoices; cross-user access requires elevated roles via `verifyAuthority`.
+
+5. Validation: Viewing endpoints don’t require body validation; optional `status` is a query param passed through to the service.
+
+---
+
+## Try it locally (Phase 2)
+
+Resident (own invoices):
+
+```powershell
+# Replace <TOKEN> with resident's Bearer token
+$headers = @{ Authorization = "Bearer <TOKEN>" }
+Invoke-RestMethod -Uri "http://localhost:3000/api/payments/me/invoices" -Headers $headers -Method GET
+```
+
+With status filter:
+
+```powershell
+Invoke-RestMethod -Uri "http://localhost:3000/api/payments/me/invoices?status=Pending" -Headers $headers -Method GET
+```
+
+Admin/Authority/Collector (any user’s invoices):
+
+```powershell
+# Replace <ADMIN_TOKEN> and <USER_ID>
+$headers = @{ Authorization = "Bearer <ADMIN_TOKEN>" }
+Invoke-RestMethod -Uri "http://localhost:3000/api/payments/<USER_ID>/invoices" -Headers $headers -Method GET
+```
+
+---
+
+## Notes / future work (Phase 2)
+
+- Add integration tests covering both endpoints and the optional status filter.
+- Introduce pagination (`limit`, `cursor/createdAt`, `nextToken`) and additional sort options.
+- Consider response caching for admin dashboards with frequent reads.
+- Expand projections when needed (e.g., include `paidAt` when payment flow is implemented in Phase 3).

@@ -77,4 +77,19 @@ export class InvoiceService {
     const total = pending.reduce((s, p) => s + p.amount, 0);
     return { count: pending.length, total };
   }
+
+  async getInvoicesByUserId(
+    userId: string,
+    status?: import("../models/invoice.model").InvoiceStatus
+  ) {
+    const invoices = await this.repo.findAllByUser(userId, status);
+    return invoices.map((inv: any) => ({
+      id: inv._id?.toString?.() ?? inv._id,
+      amount: inv.amount,
+      reason: inv.reason,
+      status: inv.status,
+      createdAt: inv.createdAt,
+      dueDate: inv.dueDate,
+    }));
+  }
 }
