@@ -1,5 +1,6 @@
 import { CheckCircle2, Download, ArrowLeft } from "lucide-react";
 import { Button } from "./ui/button";
+import { generateReceiptPdf } from "../services/receiptPdf";
 import { Card } from "./ui/card";
 import type { Payment, Invoice } from "../types/payment";
 
@@ -41,8 +42,17 @@ export function PaymentSuccess({
   };
 
   const handleDownloadReceipt = () => {
-    // Mock download functionality
-    console.log("Downloading receipt for payment:", payment.id);
+    try {
+      generateReceiptPdf(invoice, payment, {
+        name: "SmartBin",
+        addressLine1: "123 Clean Street, Colombo",
+        addressLine2: "Sri Lanka",
+        supportEmail: "support@smartbin.local",
+      });
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error("Failed to generate receipt PDF", e);
+    }
   };
 
   return (

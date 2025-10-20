@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FileText, Upload, CheckCircle } from "lucide-react";
+import { FileText, Upload, CheckCircle, Download } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -11,7 +11,8 @@ import {
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
 import { Label } from "./ui/label";
-import type { Invoice } from "../types/payment";
+import type { Invoice, Payment } from "../types/payment";
+import { generateReceiptPdf } from "../services/receiptPdf";
 
 interface RefundRequestDialogProps {
   open: boolean;
@@ -29,6 +30,32 @@ export function RefundRequestDialog({
   const [reason, setReason] = useState("");
   const [attachment, setAttachment] = useState<File | null>(null);
   const [submitted, setSubmitted] = useState(false);
+
+  const totalAmount =
+    invoice.amount + (invoice.lateFee || 0) - (invoice.discount || 0);
+
+  const handleDownloadReceipt = () => {
+    // Build a minimal payment stub for PDF generation when viewing a paid invoice
+    const payment: Payment = {
+      id: `INV-${invoice.id}`,
+      invoiceId: invoice.id,
+      amount: totalAmount,
+      method: "bank_transfer",
+      timestamp: new Date().toISOString(),
+      status: "success",
+    };
+    try {
+      generateReceiptPdf(invoice, payment, {
+        name: "SmartBin",
+        addressLine1: "123 Clean Street, Colombo",
+        addressLine2: "Sri Lanka",
+        supportEmail: "support@smartbin.local",
+      });
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error("Failed to generate receipt PDF", e);
+    }
+  };
 
   const handleSubmit = () => {
     if (reason.trim()) {
@@ -146,6 +173,10 @@ export function RefundRequestDialog({
         </div>
 
         <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={handleDownloadReceipt}>
+            <Download className="w-4 h-4 mr-2" />
+            Download Receipt (PDF)
+          </Button>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>

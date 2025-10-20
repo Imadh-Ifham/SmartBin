@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Download, FileText } from "lucide-react";
+import { Download, FileText, ChevronDown } from "lucide-react";
 import { Button } from "./ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import {
@@ -18,6 +18,11 @@ import {
   type GetMyInvoicesParams,
 } from "../../../api/payment/invoice.api";
 import { PageSkeleton } from "../../../components/LoadingSkeleton";
+import {
+  exportInvoicesCsv,
+  exportInvoicesPdf,
+} from "../services/exportInvoices";
+import PartialPaymentDialog from "./PartialPaymentDialog";
 
 interface BillingDashboardProps {
   onPayNow: (invoice: Invoice) => void;
@@ -29,6 +34,8 @@ export function BillingDashboard({
   onViewInvoice,
 }: BillingDashboardProps) {
   const [activeTab, setActiveTab] = useState<string>("all");
+  const [partialOpen, setPartialOpen] = useState(false);
+  const [partialInvoice, setPartialInvoice] = useState<Invoice | null>(null);
 
   // Fetch invoices from backend for logged-in resident
   type BackendStatus = GetMyInvoicesParams["status"];
@@ -82,6 +89,8 @@ export function BillingDashboard({
       dateIssued: inv.createdAt,
       dueDate: inv.dueDate ?? inv.createdAt,
       amount: inv.amount,
+      paidToDate: (inv as any).paidToDate ?? undefined,
+      outstanding: (inv as any).outstanding ?? undefined,
       reason: toUiReason(inv.reason),
       originatingUseCase: "Payments",
       status: toUiStatus(inv.status),
@@ -142,8 +151,10 @@ export function BillingDashboard({
           >
             {formatCurrency(
               invoices
-                .filter((i) => i.status === "pending")
-                .reduce((sum, i) => sum + i.amount, 0)
+                .filter(
+                  (i) => i.status === "pending" || i.status === "partially_paid"
+                )
+                .reduce((sum, i) => sum + (i.outstanding ?? i.amount), 0)
             )}
           </p>
         </div>
@@ -210,11 +221,19 @@ export function BillingDashboard({
               </TabsList>
 
               <div className="flex gap-2">
-                <Button variant="outline" size="sm">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => exportInvoicesPdf(invoices)}
+                >
                   <Download className="w-4 h-4 mr-2" />
                   Export PDF
                 </Button>
-                <Button variant="outline" size="sm">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => exportInvoicesCsv(invoices)}
+                >
                   <Download className="w-4 h-4 mr-2" />
                   Export CSV
                 </Button>
@@ -262,14 +281,45 @@ export function BillingDashboard({
                         <InvoiceStatusBadge status={invoice.status} />
                       </TableCell>
                       <TableCell className="text-right">
-                        {invoice.status === "pending" && (
+                        {/* Partially paid → single button to pay remaining */}
+                        {invoice.status === "partially_paid" && (
                           <Button
                             size="sm"
                             onClick={() => onPayNow(invoice)}
                             className="bg-green-700 hover:bg-green-800 text-white"
                           >
-                            Pay Now
+                            {invoice.outstanding
+                              ? `Pay Remaining (${formatCurrency(
+                                  invoice.outstanding
+                                )})`
+                              : "Pay Now"}
                           </Button>
+                        )}
+
+                        {/* Pending → split button with dropdown (Pay Now | Pay Partial) */}
+                        {invoice.status === "pending" && (
+                          <div className="inline-flex items-stretch border border-gray-300 rounded-md overflow-hidden">
+                            <Button
+                              size="sm"
+                              onClick={() => onPayNow(invoice)}
+                              className="bg-green-700 hover:bg-green-800 text-white rounded-none"
+                            >
+                              Pay Now
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="rounded-none border-0 border-l"
+                              onClick={() => {
+                                setPartialInvoice(invoice);
+                                setPartialOpen(true);
+                              }}
+                              aria-label="Pay Partial"
+                              title="Pay Partial"
+                            >
+                              <ChevronDown className="w-4 h-4" />
+                            </Button>
+                          </div>
                         )}
                         {invoice.status === "paid" && (
                           <Button
@@ -289,6 +339,16 @@ export function BillingDashboard({
           </Tabs>
         </div>
       </div>
+      <PartialPaymentDialog
+        open={partialOpen}
+        onOpenChange={setPartialOpen}
+        invoice={partialInvoice}
+        onSubmit={(amt) => {
+          if (!partialInvoice) return;
+          const patched: Invoice = { ...partialInvoice, outstanding: amt };
+          onPayNow(patched);
+        }}
+      />
     </div>
   );
 }

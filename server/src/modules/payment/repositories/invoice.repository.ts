@@ -37,6 +37,17 @@ export class InvoiceRepository {
     );
   }
 
+  async updateTotals(
+    id: string,
+    patch: Partial<Pick<IInvoice, "paidToDate" | "outstanding" | "status">>,
+    opts?: { session?: any }
+  ) {
+    return await InvoiceModel.findByIdAndUpdate(id, patch, {
+      new: true,
+      session: opts?.session,
+    }).exec();
+  }
+
   async findRecentPendingByUserAndReason(
     userId: string,
     reason: string,

@@ -133,9 +133,24 @@ export class PaymentService {
           { session }
         );
 
-        // If success now, update invoice to Paid
+        // If succeeded, update invoice totals and status based on remaining balance
         if (gatewayResult.status === "succeeded" || gatewayResult.success) {
-          await this.invoiceRepo.updateStatus(invoiceId, "Paid", { session });
+          const currentPaid =
+            typeof (invoice as any).paidToDate === "number"
+              ? (invoice as any).paidToDate
+              : paid;
+          const newPaid = Math.min(invoice.amount, currentPaid + amount);
+          const newOutstanding = Math.max(0, invoice.amount - newPaid);
+          const newStatus = newOutstanding === 0 ? "Paid" : "Partially Paid";
+          await this.invoiceRepo.updateTotals(
+            invoiceId,
+            {
+              paidToDate: newPaid,
+              outstanding: newOutstanding,
+              status: newStatus,
+            },
+            { session }
+          );
         }
 
         await session.commitTransaction();
@@ -198,10 +213,25 @@ export class PaymentService {
     if (!payment) return null;
     if (payment.status !== "Success") {
       await this.paymentRepo.updateStatus(payment._id.toString(), "Success");
-      await this.invoiceRepo.updateStatus(
-        (payment.invoiceId as any).toString(),
-        "Paid"
+      // Recalculate totals for the invoice after this success
+      const invoiceId = (payment.invoiceId as any).toString();
+      const all = await this.paymentRepo.findByInvoice(invoiceId);
+      const totalPaid = (all || []).reduce(
+        (s, p: any) => s + (p.status === "Success" ? p.amount : 0),
+        0
       );
+      // Fetch invoice amount to compute outstanding
+      const invoice = await this.invoiceRepo.findById(invoiceId);
+      if (invoice) {
+        const newPaid = Math.min(invoice.amount, totalPaid);
+        const newOutstanding = Math.max(0, invoice.amount - newPaid);
+        const newStatus = newOutstanding === 0 ? "Paid" : "Partially Paid";
+        await this.invoiceRepo.updateTotals(invoiceId, {
+          paidToDate: newPaid,
+          outstanding: newOutstanding,
+          status: newStatus,
+        });
+      }
     }
     return payment;
   }
