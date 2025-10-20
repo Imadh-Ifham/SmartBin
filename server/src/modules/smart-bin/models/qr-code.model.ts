@@ -8,6 +8,8 @@ export interface IQRCode {
   code: string;
   qrUrl: string;
   address: string;
+  province: string;
+  city: string;
   location?: {
     type: "Point";
     coordinates: [number, number]; // [lng, lat]
@@ -32,6 +34,8 @@ const QRCodeSchema = new Schema<IQRCode>(
     qrUrl: { type: String, required: true },
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     address: { type: String, default: "" },
+    province: { type: String },
+    city: { type: String },
     location: { type: GeoSchema },
     status: {
       type: String,
