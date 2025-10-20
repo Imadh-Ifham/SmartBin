@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Toaster, toast } from "react-hot-toast";
 import { DashboardLayout } from "../components/DashboardLayout";
 import { BillingDashboard } from "../components/BillingDashboard";
@@ -11,11 +12,39 @@ import type { Invoice, Payment, PaymentMethod } from "../types/payment";
 type Screen = "dashboard" | "checkout" | "success" | "failure";
 
 const ManagePayment = () => {
+  const queryClient = useQueryClient();
   const [currentScreen, setCurrentScreen] = useState<Screen>("dashboard");
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [currentPayment, setCurrentPayment] = useState<Payment | null>(null);
   const [failureReason] = useState<string>("");
   const [refundDialogOpen, setRefundDialogOpen] = useState(false);
+
+  // Optimistically mark an invoice as Paid in all invoice query caches and refetch in background
+  const markInvoicePaidOptimistic = (invoiceId: string) => {
+    const entries = queryClient.getQueriesData<any>({ queryKey: ["invoices"] });
+    for (const [key, data] of entries) {
+      if (!Array.isArray(data)) continue;
+      // Determine the current tab from the queryKey (['invoices','me',{tab: 'pending'}])
+      let tab: string | undefined;
+      if (Array.isArray(key) && typeof key[2] === "object" && key[2] !== null) {
+        tab = (key as any)[2]?.tab;
+      }
+      const next = data
+        .map((inv: any) =>
+          inv.id === invoiceId ? { ...inv, status: "Paid" } : inv
+        )
+        // If this cache represents the Pending tab, remove the invoice immediately
+        .filter((inv: any) =>
+          inv.id === invoiceId && tab === "pending" ? false : true
+        );
+      queryClient.setQueryData(key, next);
+    }
+    // Kick off background refetch so we stay consistent with server
+    queryClient.invalidateQueries({
+      queryKey: ["invoices"],
+      refetchType: "active",
+    });
+  };
 
   const handlePayNow = (invoice: Invoice) => {
     setSelectedInvoice(invoice);
@@ -43,6 +72,8 @@ const ManagePayment = () => {
 
     setCurrentPayment(payment);
     setCurrentScreen("success");
+    // Optimistically reflect Paid status and update dashboard summaries
+    markInvoicePaidOptimistic(selectedInvoice.id);
     toast.success("Payment Successful", { duration: 3000 });
   };
 
@@ -60,6 +91,11 @@ const ManagePayment = () => {
 
   const handleBackToInvoices = () => {
     setCurrentScreen("dashboard");
+    // Ensure invoices are fresh when returning to dashboard
+    queryClient.invalidateQueries({
+      queryKey: ["invoices"],
+      refetchType: "active",
+    });
     setSelectedInvoice(null);
     setCurrentPayment(null);
   };
