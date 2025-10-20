@@ -1,16 +1,17 @@
 import Stripe from "stripe";
 
-let _stripe: Stripe | undefined;
+// Cache the Stripe client on the global object so tests can reset it between runs
 function getStripeClient(): Stripe {
-  if (_stripe) return _stripe;
+  const g = global as unknown as { _stripe?: Stripe };
+  if (g._stripe) return g._stripe;
   const key = process.env.STRIPE_SECRET_KEY;
-  if (!key) {
+  if (!key || key === "undefined" || key === "null") {
     throw new Error(
       "Stripe not configured: set STRIPE_SECRET_KEY in your environment (.env)"
     );
   }
-  _stripe = new Stripe(key);
-  return _stripe;
+  g._stripe = new Stripe(key);
+  return g._stripe;
 }
 
 export class StripeService {

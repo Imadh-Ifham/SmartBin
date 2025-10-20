@@ -109,71 +109,88 @@ export class PaymentService {
       });
     }
 
-    // Record payment and update invoice within a transaction
-    const session = await mongoose.startSession();
-    session.startTransaction();
-    try {
-      const paymentDoc = await this.paymentRepo.create(
-        {
-          invoiceId,
-          amount,
-          method,
-          status:
-            gatewayResult.status === "succeeded" || gatewayResult.success
-              ? "Success"
-              : "Processing",
-          gateway: method === "Card" ? "stripe" : "mock",
-          transactionId: gatewayResult.id,
-          metadata: gatewayResult.raw || {},
-        },
-        { session }
-      );
+    // Record payment and update invoice within a transaction, with small retry for transient lock errors
+    const isTransientLock = (e: any) =>
+      String(e?.message || e).includes("Unable to acquire IX lock");
+    let lastErr: any;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const session = await mongoose.startSession();
+      session.startTransaction();
+      try {
+        const paymentDoc = await this.paymentRepo.create(
+          {
+            invoiceId,
+            amount,
+            method,
+            status:
+              gatewayResult.status === "succeeded" || gatewayResult.success
+                ? "Success"
+                : "Processing",
+            gateway: method === "Card" ? "stripe" : "mock",
+            transactionId: gatewayResult.id,
+            metadata: gatewayResult.raw || {},
+          },
+          { session }
+        );
 
-      // If success now, update invoice to Paid
-      if (gatewayResult.status === "succeeded" || gatewayResult.success) {
-        await this.invoiceRepo.updateStatus(invoiceId, "Paid", { session });
-      }
+        // If success now, update invoice to Paid
+        if (gatewayResult.status === "succeeded" || gatewayResult.success) {
+          await this.invoiceRepo.updateStatus(invoiceId, "Paid", { session });
+        }
 
-      await session.commitTransaction();
-      session.endSession();
+        await session.commitTransaction();
+        session.endSession();
 
-      // Create receipt record (simple JSON)
-      const receipt = await this.receiptSvc.generate({
-        invoiceId: invoiceId.toString(),
-        paymentId: (paymentDoc as any)._id.toString(),
-        userId: invoice.userId.toString(),
-        amount: (paymentDoc as any).amount,
-        data: {
-          gateway: (paymentDoc as any).gateway,
-          transactionId: (paymentDoc as any).transactionId,
-        },
-      });
-
-      // Notify success
-      await this.notifier.notifyPaymentSuccess({
-        invoiceId: invoiceId.toString(),
-        amount: (paymentDoc as any).amount,
-      });
-
-      const response = {
-        payment: paymentDoc,
-        clientSecret: gatewayResult.clientSecret,
-        receipt,
-      };
-
-      if (idempotencyKey)
-        await this.idempotencyRepo.complete(idempotencyKey, response);
-
-      return response;
-    } catch (err) {
-      await session.abortTransaction();
-      session.endSession();
-      if (idempotencyKey)
-        await this.idempotencyRepo.fail(idempotencyKey, {
-          error: (err as any)?.message || String(err),
+        // Create receipt record (simple JSON)
+        const receipt = await this.receiptSvc.generate({
+          invoiceId: invoiceId.toString(),
+          paymentId: (paymentDoc as any)._id.toString(),
+          userId: invoice.userId.toString(),
+          amount: (paymentDoc as any).amount,
+          data: {
+            gateway: (paymentDoc as any).gateway,
+            transactionId: (paymentDoc as any).transactionId,
+          },
         });
-      throw err;
+
+        // Notify success
+        await this.notifier.notifyPaymentSuccess({
+          invoiceId: invoiceId.toString(),
+          amount: (paymentDoc as any).amount,
+        });
+
+        const response = {
+          payment: paymentDoc,
+          clientSecret: gatewayResult.clientSecret,
+          receipt,
+        };
+
+        if (idempotencyKey)
+          await this.idempotencyRepo.complete(idempotencyKey, response);
+
+        return response;
+      } catch (err) {
+        lastErr = err;
+        await session.abortTransaction();
+        session.endSession();
+        if (isTransientLock(err) && attempt < 2) {
+          // brief backoff then retry
+          await new Promise((r) => setTimeout(r, 25 * (attempt + 1)));
+          continue;
+        }
+        if (idempotencyKey)
+          await this.idempotencyRepo.fail(idempotencyKey, {
+            error: (err as any)?.message || String(err),
+          });
+        throw err;
+      }
     }
+    // If we exhausted retries, mark failed and throw
+    if (idempotencyKey)
+      await this.idempotencyRepo.fail(idempotencyKey, {
+        error: (lastErr as any)?.message || String(lastErr),
+      });
+    throw lastErr;
   }
 
   async handleGatewaySucceeded(transactionId: string) {

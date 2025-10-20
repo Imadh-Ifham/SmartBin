@@ -40,14 +40,12 @@ describe("PaymentService (unit)", () => {
     };
     const paymentRepo = {
       findByInvoice: jest.fn().mockResolvedValue([]),
-      create: jest
-        .fn()
-        .mockResolvedValue({
-          _id: "pay_1",
-          amount: 1500,
-          gateway: "stripe",
-          transactionId: "pi_1",
-        }),
+      create: jest.fn().mockResolvedValue({
+        _id: "pay_1",
+        amount: 1500,
+        gateway: "stripe",
+        transactionId: "pi_1",
+      }),
       updateStatus: jest.fn(),
       findByTransactionId: jest.fn(),
     };
@@ -58,22 +56,18 @@ describe("PaymentService (unit)", () => {
       fail: jest.fn(),
     };
     const receiptSvc = {
-      generate: jest
-        .fn()
-        .mockResolvedValue({
-          id: "rcpt_1",
-          url: "/api/payments/receipts/rcpt_1",
-        }),
+      generate: jest.fn().mockResolvedValue({
+        id: "rcpt_1",
+        url: "/api/payments/receipts/rcpt_1",
+      }),
     };
     const stripe = {
-      createPaymentIntent: jest
-        .fn()
-        .mockResolvedValue({
-          id: "pi_1",
-          status: "succeeded",
-          clientSecret: "sec_1",
-          raw: { ok: true },
-        }),
+      createPaymentIntent: jest.fn().mockResolvedValue({
+        id: "pi_1",
+        status: "succeeded",
+        clientSecret: "sec_1",
+        raw: { ok: true },
+      }),
     };
     const notifier = {
       notifyPaymentSuccess: jest.fn().mockResolvedValue(undefined),
@@ -294,5 +288,198 @@ describe("PaymentService (unit)", () => {
     };
     const res = await svc.handleGatewaySucceeded("pi_1");
     expect(res).toBeNull();
+  });
+
+  it("handleGatewaySucceeded is no-op when already Success", async () => {
+    const svc = mkService();
+    const payment = { _id: "pay_1", status: "Success", invoiceId: "inv_1" };
+    const paymentRepo = {
+      findByTransactionId: jest.fn().mockResolvedValue(payment),
+      updateStatus: jest.fn(),
+    };
+    const invoiceRepo = { updateStatus: jest.fn() };
+    (svc as any).paymentRepo = paymentRepo;
+    (svc as any).invoiceRepo = invoiceRepo;
+    const res = await svc.handleGatewaySucceeded("pi_1");
+    expect(res).toBe(payment);
+    expect(paymentRepo.updateStatus).not.toHaveBeenCalled();
+    expect(invoiceRepo.updateStatus).not.toHaveBeenCalled();
+  });
+
+  it("processPayment success for non-Card method (Bank)", async () => {
+    const session = mkSession();
+    const svc = mkService();
+    (svc as any).invoiceRepo = {
+      findById: jest.fn().mockResolvedValue(baseInvoice()),
+      updateStatus: jest.fn(),
+    };
+    (svc as any).paymentRepo = {
+      findByInvoice: jest.fn().mockResolvedValue([]),
+      create: jest.fn().mockResolvedValue({
+        _id: "p",
+        amount: 500,
+        gateway: "mock",
+        transactionId: "MOCK-1",
+      }),
+    };
+    (svc as any).idempotencyRepo = {
+      find: jest.fn().mockResolvedValue(null),
+      createProcessing: jest.fn(),
+      complete: jest.fn(),
+      fail: jest.fn(),
+    };
+    (svc as any).receiptSvc = {
+      generate: jest.fn().mockResolvedValue({ id: "r", url: "/u" }),
+    };
+    (svc as any).stripe = { createPaymentIntent: jest.fn() };
+    (svc as any).notifier = { notifyPaymentSuccess: jest.fn() };
+
+    const res = await svc.processPayment({
+      payerId: "user_1",
+      invoiceId: "inv_1",
+      method: "Bank",
+      amount: 500,
+    });
+    expect(res.payment.gateway).toBe("mock");
+    expect((svc as any).invoiceRepo.updateStatus).toHaveBeenCalledWith(
+      "inv_1",
+      "Paid",
+      { session }
+    );
+  });
+
+  it("amount equals outstanding boundary", async () => {
+    mkSession();
+    const svc = mkService();
+    (svc as any).invoiceRepo = {
+      findById: jest.fn().mockResolvedValue(baseInvoice({ amount: 1000 })),
+      updateStatus: jest.fn(),
+    };
+    (svc as any).paymentRepo = {
+      findByInvoice: jest
+        .fn()
+        .mockResolvedValue([{ status: "Success", amount: 300 }]),
+      create: jest.fn().mockResolvedValue({
+        _id: "p",
+        amount: 700,
+        gateway: "stripe",
+        transactionId: "pi",
+      }),
+    };
+    (svc as any).idempotencyRepo = {
+      find: jest.fn().mockResolvedValue(null),
+      createProcessing: jest.fn(),
+      complete: jest.fn(),
+      fail: jest.fn(),
+    };
+    (svc as any).stripe = {
+      createPaymentIntent: jest.fn().mockResolvedValue({
+        id: "pi",
+        status: "succeeded",
+        clientSecret: "sec",
+      }),
+    };
+    (svc as any).receiptSvc = { generate: jest.fn().mockResolvedValue({}) };
+    (svc as any).invoiceRepo.updateStatus = jest.fn();
+
+    const res = await svc.processPayment({
+      payerId: "user_1",
+      invoiceId: "inv_1",
+      method: "Card",
+      amount: 700,
+    });
+    expect(res.clientSecret).toBe("sec");
+  });
+
+  it("missing Idempotency-Key path (no dedupe)", async () => {
+    mkSession();
+    const svc = mkService();
+    (svc as any).invoiceRepo = {
+      findById: jest.fn().mockResolvedValue(baseInvoice()),
+      updateStatus: jest.fn(),
+    };
+    (svc as any).paymentRepo = {
+      findByInvoice: jest.fn().mockResolvedValue([]),
+      create: jest.fn().mockResolvedValue({ _id: "p", amount: 1000 }),
+    };
+    (svc as any).idempotencyRepo = {
+      find: jest.fn(),
+      createProcessing: jest.fn(),
+      complete: jest.fn(),
+      fail: jest.fn(),
+    };
+    (svc as any).stripe = {
+      createPaymentIntent: jest.fn().mockResolvedValue({
+        id: "pi",
+        status: "succeeded",
+        clientSecret: "sec",
+      }),
+    };
+    (svc as any).receiptSvc = { generate: jest.fn().mockResolvedValue({}) };
+
+    const res = await svc.processPayment({
+      payerId: "user_1",
+      invoiceId: "inv_1",
+      method: "Card",
+      amount: 1000,
+    });
+    expect(res.clientSecret).toBe("sec");
+    expect((svc as any).idempotencyRepo.find).not.toHaveBeenCalled();
+  });
+
+  it("getInvoices proxies to repository", async () => {
+    const svc = mkService();
+    const invoices = [{ _id: "i1" }];
+    (svc as any).invoiceRepo = {
+      findPendingByUser: jest.fn().mockResolvedValue(invoices),
+    };
+    const res = await svc.getInvoices("user_1");
+    expect((svc as any).invoiceRepo.findPendingByUser).toHaveBeenCalledWith(
+      "user_1"
+    );
+    expect(res).toBe(invoices);
+  });
+
+  it("handles error in transactional section and marks idempotency failed", async () => {
+    const session = mkSession();
+    const svc = mkService();
+    (svc as any).invoiceRepo = {
+      findById: jest.fn().mockResolvedValue(baseInvoice()),
+      updateStatus: jest.fn(),
+    };
+    (svc as any).paymentRepo = {
+      findByInvoice: jest.fn().mockResolvedValue([]),
+      create: jest.fn().mockRejectedValue(new Error("db write failed")),
+    };
+    (svc as any).idempotencyRepo = {
+      find: jest.fn().mockResolvedValue(null),
+      createProcessing: jest.fn(),
+      complete: jest.fn(),
+      fail: jest.fn(),
+    };
+    (svc as any).stripe = {
+      createPaymentIntent: jest
+        .fn()
+        .mockResolvedValue({
+          id: "pi",
+          status: "succeeded",
+          clientSecret: "sec",
+        }),
+    };
+
+    await expect(
+      svc.processPayment({
+        payerId: "user_1",
+        invoiceId: "inv_1",
+        method: "Card",
+        amount: 1000,
+        idempotencyKey: "idem",
+      })
+    ).rejects.toThrow("db write failed");
+    expect(session.abortTransaction).toHaveBeenCalled();
+    expect((svc as any).idempotencyRepo.fail).toHaveBeenCalledWith(
+      "idem",
+      expect.any(Object)
+    );
   });
 });
