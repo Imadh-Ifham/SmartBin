@@ -16,11 +16,6 @@ export class SmartBinService {
     )
       throw new Error("Invalid bin type id");
     if (
-      typeof payload.qrCode === "string" &&
-      !Types.ObjectId.isValid(payload.qrCode)
-    )
-      throw new Error("Invalid QR code id");
-    if (
       payload.qrCode &&
       typeof payload.qrCode === "string" &&
       !Types.ObjectId.isValid(payload.qrCode)

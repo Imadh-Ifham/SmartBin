@@ -10,7 +10,7 @@ import { metricsMiddleware } from "./middleware/metricsMiddleware";
 import policiesRouter from "./modules/policies/policy.routes";
 import authRoutes from "./modules/auth/routes/auth.routes";
 import paymentsRouter from "./modules/payment/routes/invoice.routes";
-import { binTypeRoutes, binRoutes } from "./modules/smart-bin/routes";
+import { binTypeRoutes, binRoutes, qrRoutes } from "./modules/smart-bin/routes";
 
 const app: Application = express();
 
@@ -58,6 +58,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/payments", paymentsRouter);
 app.use("/api/bin-types", binTypeRoutes);
 app.use("/api/bins", binRoutes);
+app.use("/api/qrs", qrRoutes);
 
 // Error Handler
 app.use(errorHandler);
