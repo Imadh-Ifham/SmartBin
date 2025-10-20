@@ -29,9 +29,13 @@ export class SmartBinService {
     return this.repo.create(payload);
   }
 
-  async getBin(idOrCode: string) {
-    if (Types.ObjectId.isValid(idOrCode)) return this.repo.findById(idOrCode);
-    return this.repo.findByCode(idOrCode);
+  async getBin(id?: string, qrCode?: string) {
+    if (id) {
+      return this.repo.findById(id!);
+    }
+    if (qrCode) {
+      return this.repo.findByCode(qrCode!);
+    }
   }
 
   async list(query: any = {}) {
