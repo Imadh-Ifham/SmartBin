@@ -1,0 +1,22 @@
+import { Router } from "express";
+import {
+  getInvoices,
+  processPayment,
+  calculateOverweight,
+  applyDiscount,
+  generateInvoice,
+  refund,
+  adminReports,
+} from "../controllers/paymentController";
+
+const router = Router();
+
+router.get("/:residentId/invoices", getInvoices);
+router.post("/pay", processPayment);
+router.post("/calculateOverweight", calculateOverweight);
+router.post("/applyDiscount", applyDiscount);
+router.post("/generateInvoice", generateInvoice);
+router.post("/refund", refund);
+router.get("/admin/reports", adminReports);
+
+export default router;
