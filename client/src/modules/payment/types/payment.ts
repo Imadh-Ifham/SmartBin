@@ -19,6 +19,8 @@ export interface Invoice {
   dateIssued: string;
   dueDate: string;
   amount: number;
+  paidToDate?: number;
+  outstanding?: number;
   reason: InvoiceReason;
   originatingUseCase: string;
   status: InvoiceStatus;

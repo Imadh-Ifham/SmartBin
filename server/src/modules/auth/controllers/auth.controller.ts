@@ -43,6 +43,19 @@ export class AuthController {
       const { email, password } = req.body;
       const result = await this.authService.login(email, password);
       // Issue refresh token cookie and return accessToken + user
+      // DEV NOTE: Logging sensitive data (tokens) to console is for local debugging only.
+      // Avoid this in production environments.
+      try {
+        const user = result.user as any;
+        console.info("[LOGIN] user authenticated", {
+          id: user?.id || user?._id,
+          role: user?.role,
+          token: result.accessToken,
+          ts: new Date().toISOString(),
+        });
+      } catch (_e) {
+        // ignore logging errors
+      }
       res
         .cookie("refreshToken", result.refreshToken, {
           httpOnly: true,

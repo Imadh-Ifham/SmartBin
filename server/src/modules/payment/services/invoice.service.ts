@@ -1,7 +1,15 @@
+import mongoose from "mongoose";
 import { InvoiceRepository } from "../repositories/invoice.repository";
+import { PaymentRepository } from "../repositories/payment.repository";
+import { CreateInvoiceDto } from "../types/invoice.dto";
+import { AuditService } from "../services/audit.service";
+import { UserRepository } from "../../auth/repositories/user.repository";
 
 export class InvoiceService {
   private repo = new InvoiceRepository();
+  private audit = new AuditService();
+  private userRepo = new UserRepository();
+  private payments = new PaymentRepository();
 
   async calculateOverweight(actualWeight: number, allowedWeight: number) {
     const excess = Math.max(0, actualWeight - allowedWeight);
@@ -20,21 +28,81 @@ export class InvoiceService {
     };
   }
 
-  async generateInvoice(input: {
-    residentId: string;
-    amount: number;
-    reason: string;
-    dueDate?: Date;
-    origin?: string;
-  }) {
-    const { residentId, amount, reason, dueDate, origin } = input;
-    return this.repo.create({
-      residentId,
-      amount,
+  private async isDuplicate(userId: string, reason: string) {
+    const recent = await this.repo.findRecentPendingByUserAndReason(
+      userId,
       reason,
-      dueDate,
-      origin,
-      status: "Pending",
-    } as any);
+      5 * 60 * 1000
+    );
+    return !!recent;
+  }
+
+  async createInvoice(input: CreateInvoiceDto & { actorId: string }) {
+    // 1. verify user exists
+    const user = await this.userRepo.findById(input.userId);
+    if (!user) throw new Error("User not found");
+
+    // 2. dedupe
+    if (await this.isDuplicate(input.userId, input.reason)) {
+      throw new Error("Duplicate invoice detected");
+    }
+
+    // 3. transaction pattern (optional now)
+    const session = await mongoose.startSession();
+    try {
+      let invoice;
+      await session.withTransaction(async () => {
+        invoice = await this.repo.create({
+          userId: input.userId,
+          amount: input.amount,
+          reason: input.reason,
+          metadata: input.metadata,
+          status: "Pending",
+          paidToDate: 0,
+          outstanding: input.amount,
+        });
+
+        await this.audit.log({
+          actorId: input.actorId,
+          action: "INVOICE_CREATED",
+          entityType: "Invoice",
+          entityId: (invoice as any)._id.toString(),
+          details: { amount: input.amount, reason: input.reason },
+        });
+      });
+      return invoice!;
+    } finally {
+      await session.endSession();
+    }
+  }
+
+  async getUnpaidSummary(userId: string) {
+    const pending = await this.repo.findPendingByUser(userId);
+    const total = pending.reduce((s, p) => s + p.amount, 0);
+    return { count: pending.length, total };
+  }
+
+  async getInvoicesByUserId(
+    userId: string,
+    status?: import("../models/invoice.model").InvoiceStatus
+  ) {
+    const invoices = await this.repo.findAllByUser(userId, status);
+    const ids = invoices.map((i: any) => i._id?.toString?.() ?? i._id);
+    const sums = await this.payments.sumSuccessByInvoiceIds(ids);
+    return invoices.map((inv: any) => {
+      const id = inv._id?.toString?.() ?? inv._id;
+      const paidToDate = sums.get(String(id)) || 0;
+      const outstanding = Math.max(0, (inv.amount || 0) - paidToDate);
+      return {
+        id,
+        amount: inv.amount,
+        reason: inv.reason,
+        status: inv.status,
+        createdAt: inv.createdAt,
+        dueDate: inv.dueDate,
+        paidToDate,
+        outstanding,
+      };
+    });
   }
 }

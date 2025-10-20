@@ -95,6 +95,38 @@ export const SmartBinController = {
       return sendError(res, 500, e.message || "Server error");
     }
   },
+
+  startMaintenance: async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      if (!id) return sendError(res, 400, "Invalid id");
+      const bin: any = await smartBinService.getBin(id);
+      if (!bin) return sendError(res, 404, "Bin not found");
+      bin.status = "InMaintenance";
+      const updated = await smartBinService.updateBin(bin._id.toString(), {
+        status: bin.status,
+      } as any);
+      return res.json({ message: "Maintenance started", bin: updated });
+    } catch (e: any) {
+      return sendError(res, 500, e.message || "Server error");
+    }
+  },
+
+  finishMaintenance: async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      if (!id) return sendError(res, 400, "Invalid id");
+      const bin: any = await smartBinService.getBin(id);
+      if (!bin) return sendError(res, 404, "Bin not found");
+      bin.status = "Active";
+      const updated = await smartBinService.updateBin(bin._id.toString(), {
+        status: bin.status,
+      } as any);
+      return res.json({ message: "Maintenance finished", bin: updated });
+    } catch (e: any) {
+      return sendError(res, 500, e.message || "Server error");
+    }
+  },
 };
 
 export const asyncHandler =
