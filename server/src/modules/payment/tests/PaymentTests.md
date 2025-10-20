@@ -9,6 +9,7 @@ This guide documents the current test coverage for the Payment module: what each
 Unit tests
 
 - `tests/payment.service.test.ts`
+
   - Orchestration happy path (Card via Stripe): creates a session, mocks repositories and `StripeService` to return a succeeded PaymentIntent; verifies transaction boundaries, payment creation, invoice status update to Paid, receipt generation, notifier call, and idempotency completion.
   - Invoice not found → 404: mocks `InvoiceRepository.findById` to return null; asserts thrown `{statusCode:404}` and idempotency fail recorded.
   - Unauthorized payer → 403: invoice belongs to another user; asserts thrown `{statusCode:403}` and idempotency fail recorded.
@@ -26,6 +27,7 @@ Unit tests
   - Transactional error handling: simulates a failure in `paymentRepo.create`; ensures transaction is aborted and idempotency marked failed.
 
 - `tests/stripe.service.test.ts`
+
   - createPaymentIntent: verifies amount×100, currency lower-casing, optional description, and that idempotencyKey is passed via request options; returns `clientSecret`/status/id mapping.
   - verifyWebhookSignature: ensures it calls `webhooks.constructEvent` with payload, signature header, and configured secret, and throws if signature header is missing.
   - Lazy init error: throws a clear message when `STRIPE_SECRET_KEY` is absent or bogus.
@@ -112,9 +114,11 @@ npx jest src/modules/payment/tests/payment.service.test.ts --watch
 ### Troubleshooting
 
 - Stripe SDK initialization in tests:
+
   - Runtime code lazily initializes the Stripe client and caches it on `global` for test resets; the tests mock the `stripe` module to avoid real initialization.
 
 - Idempotency not working:
+
   - Ensure the client supplies the `Idempotency-Key` header. Check repository transitions: `createProcessing` → `complete` or `fail`.
 
 - Coverage not counting controllers/routes:
