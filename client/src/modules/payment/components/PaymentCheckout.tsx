@@ -33,7 +33,7 @@ export function PaymentCheckout({
   const elements = useElements();
 
   const total = useMemo(() => {
-    const subtotal = invoice.amount;
+    const subtotal = invoice.outstanding ?? invoice.amount;
     const lateFee = invoice.lateFee || 0;
     const discount = invoice.discount || 0;
     return subtotal + lateFee - discount;
@@ -100,7 +100,7 @@ export function PaymentCheckout({
     }
   };
 
-  const subtotal = invoice.amount;
+  const subtotal = invoice.outstanding ?? invoice.amount;
   const lateFee = invoice.lateFee || 0;
   const discount = invoice.discount || 0;
 

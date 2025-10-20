@@ -86,6 +86,8 @@ export function BillingDashboard({
       dateIssued: inv.createdAt,
       dueDate: inv.dueDate ?? inv.createdAt,
       amount: inv.amount,
+      paidToDate: (inv as any).paidToDate ?? undefined,
+      outstanding: (inv as any).outstanding ?? undefined,
       reason: toUiReason(inv.reason),
       originatingUseCase: "Payments",
       status: toUiStatus(inv.status),
@@ -274,13 +276,19 @@ export function BillingDashboard({
                         <InvoiceStatusBadge status={invoice.status} />
                       </TableCell>
                       <TableCell className="text-right">
-                        {invoice.status === "pending" && (
+                        {(invoice.status === "pending" ||
+                          invoice.status === "partially_paid") && (
                           <Button
                             size="sm"
                             onClick={() => onPayNow(invoice)}
                             className="bg-green-700 hover:bg-green-800 text-white"
                           >
-                            Pay Now
+                            {invoice.status === "partially_paid" &&
+                            invoice.outstanding
+                              ? `Pay Remaining (${formatCurrency(
+                                  invoice.outstanding
+                                )})`
+                              : "Pay Now"}
                           </Button>
                         )}
                         {invoice.status === "paid" && (

@@ -32,4 +32,18 @@ export class PaymentRepository {
       { new: true, session }
     ).exec();
   }
+
+  async sumSuccessByInvoiceIds(invoiceIds: string[]) {
+    if (!invoiceIds.length) return new Map<string, number>();
+    const valid = invoiceIds.filter((id) => /^[a-f\d]{24}$/i.test(String(id)));
+    if (!valid.length) return new Map<string, number>();
+    const ids = valid.map((id) => new Types.ObjectId(id));
+    const rows = await PaymentModel.aggregate([
+      { $match: { invoiceId: { $in: ids }, status: "Success" } },
+      { $group: { _id: "$invoiceId", total: { $sum: "$amount" } } },
+    ]);
+    const map = new Map<string, number>();
+    for (const r of rows) map.set(String(r._id), r.total || 0);
+    return map;
+  }
 }

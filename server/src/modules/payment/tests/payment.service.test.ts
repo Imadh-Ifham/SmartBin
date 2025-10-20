@@ -343,7 +343,7 @@ describe("PaymentService (unit)", () => {
     expect(res.payment.gateway).toBe("mock");
     expect((svc as any).invoiceRepo.updateStatus).toHaveBeenCalledWith(
       "inv_1",
-      "Paid",
+      "Partially Paid",
       { session }
     );
   });
@@ -458,13 +458,11 @@ describe("PaymentService (unit)", () => {
       fail: jest.fn(),
     };
     (svc as any).stripe = {
-      createPaymentIntent: jest
-        .fn()
-        .mockResolvedValue({
-          id: "pi",
-          status: "succeeded",
-          clientSecret: "sec",
-        }),
+      createPaymentIntent: jest.fn().mockResolvedValue({
+        id: "pi",
+        status: "succeeded",
+        clientSecret: "sec",
+      }),
     };
 
     await expect(

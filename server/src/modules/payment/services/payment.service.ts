@@ -133,9 +133,14 @@ export class PaymentService {
           { session }
         );
 
-        // If success now, update invoice to Paid
+        // If succeeded, update invoice status based on remaining balance
         if (gatewayResult.status === "succeeded" || gatewayResult.success) {
-          await this.invoiceRepo.updateStatus(invoiceId, "Paid", { session });
+          const newPaid = paid + amount;
+          const newStatus =
+            newPaid >= invoice.amount ? "Paid" : "Partially Paid";
+          await this.invoiceRepo.updateStatus(invoiceId, newStatus, {
+            session,
+          });
         }
 
         await session.commitTransaction();
