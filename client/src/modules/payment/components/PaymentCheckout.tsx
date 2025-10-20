@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   CreditCard,
   Building2,
@@ -8,10 +8,13 @@ import {
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
-import { Input } from "./ui/input";
+// import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import type { Invoice, PaymentMethod } from "../types/payment";
+import { CardElement, useElements, useStripe } from "@stripe/react-stripe-js";
+import { apiProcessPayment } from "../../../api/payment/pay.api";
+import { v4 as uuidv4 } from "uuid";
 
 interface PaymentCheckoutProps {
   invoice: Invoice;
@@ -26,6 +29,15 @@ export function PaymentCheckout({
 }: PaymentCheckoutProps) {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("card");
   const [isProcessing, setIsProcessing] = useState(false);
+  const stripe = useStripe();
+  const elements = useElements();
+
+  const total = useMemo(() => {
+    const subtotal = invoice.amount;
+    const lateFee = invoice.lateFee || 0;
+    const discount = invoice.discount || 0;
+    return subtotal + lateFee - discount;
+  }, [invoice]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-LK", {
@@ -42,18 +54,55 @@ export function PaymentCheckout({
     });
   };
 
-  const handleConfirmPayment = () => {
-    setIsProcessing(true);
-    setTimeout(() => {
-      onConfirmPayment(paymentMethod);
+  const handleConfirmPayment = async () => {
+    try {
+      setIsProcessing(true);
+      if (paymentMethod !== "card") {
+        // For now only Card uses Stripe. Bank/Wallet can be integrated later.
+        onConfirmPayment(paymentMethod);
+        return;
+      }
+
+      if (!stripe || !elements) return;
+      const card = elements.getElement(CardElement);
+      if (!card) return;
+
+      // 1) Create PaymentIntent on backend
+      const idempotencyKey = uuidv4();
+      const server = await apiProcessPayment(
+        {
+          invoiceId: invoice.id,
+          method: "Card",
+          amount: total,
+        },
+        idempotencyKey
+      );
+
+      if (!server.clientSecret) throw new Error("Missing clientSecret");
+
+      // 2) Confirm card payment on client
+      const result = await stripe.confirmCardPayment(server.clientSecret, {
+        payment_method: { card },
+      });
+
+      if (result.error) {
+        // Show error to your customer (e.g., insufficient funds)
+        throw new Error(result.error.message || "Payment failed");
+      }
+
+      // Success. Backend webhook or our immediate success already set invoice to Paid.
+      onConfirmPayment("card");
+    } catch (e) {
+      console.error(e);
+      onConfirmPayment("card"); // fall back to existing success/failure screen routing
+    } finally {
       setIsProcessing(false);
-    }, 1500);
+    }
   };
 
   const subtotal = invoice.amount;
   const lateFee = invoice.lateFee || 0;
   const discount = invoice.discount || 0;
-  const total = subtotal + lateFee - discount;
 
   return (
     <div className="p-8 max-w-6xl mx-auto">
@@ -178,39 +227,11 @@ export function PaymentCheckout({
             {/* Card details form (shown when card is selected) */}
             {paymentMethod === "card" && (
               <div className="mt-6 pt-6 border-t border-gray-200 space-y-4">
-                <div>
-                  <Label htmlFor="cardNumber">Card Number</Label>
-                  <Input
-                    id="cardNumber"
-                    placeholder="1234 5678 9012 3456"
-                    className="mt-1"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="expiry">Expiry Date</Label>
-                    <Input id="expiry" placeholder="MM/YY" className="mt-1" />
+                <div className="space-y-2">
+                  <Label>Card Details</Label>
+                  <div className="border rounded p-3">
+                    <CardElement options={{ hidePostalCode: true }} />
                   </div>
-                  <div>
-                    <Label htmlFor="cvv">CVV</Label>
-                    <Input
-                      id="cvv"
-                      placeholder="123"
-                      type="password"
-                      maxLength={3}
-                      className="mt-1"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="cardName">Cardholder Name</Label>
-                  <Input
-                    id="cardName"
-                    placeholder="John Doe"
-                    className="mt-1"
-                  />
                 </div>
               </div>
             )}

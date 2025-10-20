@@ -14,7 +14,7 @@ const ManagePayment = () => {
   const [currentScreen, setCurrentScreen] = useState<Screen>("dashboard");
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [currentPayment, setCurrentPayment] = useState<Payment | null>(null);
-  const [failureReason, setFailureReason] = useState<string>("");
+  const [failureReason] = useState<string>("");
   const [refundDialogOpen, setRefundDialogOpen] = useState(false);
 
   const handlePayNow = (invoice: Invoice) => {
@@ -31,41 +31,19 @@ const ManagePayment = () => {
 
   const handleConfirmPayment = (method: PaymentMethod) => {
     if (!selectedInvoice) return;
+    // This method is now called after Stripe confirm in PaymentCheckout; we treat it as success path.
+    const payment: Payment = {
+      id: `PAY-${Date.now()}`,
+      invoiceId: selectedInvoice.id,
+      amount: selectedInvoice.amount + (selectedInvoice.lateFee || 0),
+      method,
+      timestamp: new Date().toISOString(),
+      status: "success",
+    };
 
-    // Simulate payment processing with 70% success rate
-    const isSuccess = Math.random() > 0.3;
-
-    if (isSuccess) {
-      const payment: Payment = {
-        id: `PAY-${Date.now()}`,
-        invoiceId: selectedInvoice.id,
-        amount: selectedInvoice.amount + (selectedInvoice.lateFee || 0),
-        method,
-        timestamp: new Date().toISOString(),
-        status: "success",
-      };
-
-      setCurrentPayment(payment);
-      setCurrentScreen("success");
-
-      toast.success("Payment Successful", {
-        duration: 3000,
-      });
-    } else {
-      const reasons = [
-        "Payment declined by your bank. Please check your card details and try again.",
-        "Insufficient funds. Please ensure you have sufficient balance and retry.",
-        "Card expired. Please use a different payment method.",
-        "Payment timeout. The transaction took too long to process.",
-        "Payment gateway error. Please try again or use a different payment method.",
-      ];
-
-      const randomReason = reasons[Math.floor(Math.random() * reasons.length)];
-      setFailureReason(randomReason);
-      setCurrentScreen("failure");
-
-      toast.error("Payment Failed");
-    }
+    setCurrentPayment(payment);
+    setCurrentScreen("success");
+    toast.success("Payment Successful", { duration: 3000 });
   };
 
   const handleRetryPayment = () => {

@@ -25,8 +25,16 @@ export class InvoiceRepository {
     return await InvoiceModel.findById(id).exec();
   }
 
-  async updateStatus(id: string, status: InvoiceStatus) {
-    return await InvoiceModel.findByIdAndUpdate(id, { status }, { new: true });
+  async updateStatus(
+    id: string,
+    status: InvoiceStatus,
+    opts?: { session?: any }
+  ) {
+    return await InvoiceModel.findByIdAndUpdate(
+      id,
+      { status },
+      { new: true, session: opts?.session }
+    );
   }
 
   async findRecentPendingByUserAndReason(
