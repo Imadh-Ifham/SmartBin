@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import { PaymentService } from "../services/payment.service";
 import { InvoiceService } from "../services/invoice.service";
+import { validateRequest } from "../../../middleware/validateRequest";
+import { ProcessPaymentSchema } from "../types/pay.dto";
 
 const paymentService = new PaymentService();
 const invoiceService = new InvoiceService();
@@ -18,19 +20,23 @@ export const getInvoices = async (req: Request, res: Response) => {
 
 export const processPayment = async (req: Request, res: Response) => {
   try {
-    const { invoiceId, method, amount } = req.body as {
-      invoiceId: string;
-      method: "Card" | "Bank" | "eWallet";
-      amount: number;
-    };
-    const payment = await paymentService.processPayment(
-      invoiceId,
-      method,
-      amount
-    );
-    res.status(200).json(payment);
+    const dto = (req as any).validatedBody || req.body;
+    const payerId = (req as any).user?.id as string | undefined;
+    if (!payerId) return res.status(401).json({ message: "Unauthorized" });
+    const idempotencyKey =
+      (req.header("Idempotency-Key") as string | undefined) ||
+      dto.idempotencyKey;
+    const result = await paymentService.processPayment({
+      payerId,
+      invoiceId: dto.invoiceId,
+      method: dto.method,
+      amount: dto.amount,
+      paymentDetails: dto.paymentDetails,
+      idempotencyKey,
+    });
+    res.status(200).json(result);
   } catch (err: any) {
-    res.status(400).json({ message: err.message });
+    res.status(err.statusCode || 400).json({ message: err.message });
   }
 };
 

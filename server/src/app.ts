@@ -1,4 +1,5 @@
 import express, { Application } from "express";
+import webhookRawRoutes from "./modules/payment/routes/webhook.raw.routes";
 import cookieParser from "cookie-parser";
 import morgan from "morgan";
 import cors from "cors";
@@ -9,10 +10,15 @@ import { errorHandler } from "./middleware/errorHandler";
 import { metricsMiddleware } from "./middleware/metricsMiddleware";
 import policiesRouter from "./modules/policies/policy.routes";
 import authRoutes from "./modules/auth/routes/auth.routes";
-import paymentsRouter from "./modules/payment/routes/invoice.routes";
+import invoiceRoutes from "./modules/payment/routes/invoice.routes";
+import paymentRoutes from "./modules/payment/routes/payment.routes";
 import { binTypeRoutes, binRoutes } from "./modules/smart-bin/routes";
 
 const app: Application = express();
+
+// Mount Stripe webhook router with raw body BEFORE express.json()
+// This path must match the router path
+app.use("/api/payments", webhookRawRoutes);
 
 // Middleware
 app.use(express.json());
@@ -55,7 +61,8 @@ if (process.env.DEV_AUTH === "true") {
 // Routes
 app.use("/api/policies", policiesRouter);
 app.use("/api/auth", authRoutes);
-app.use("/api/payments", paymentsRouter);
+app.use("/api/payments", invoiceRoutes);
+app.use("/api/payments", paymentRoutes);
 app.use("/api/bin-types", binTypeRoutes);
 app.use("/api/bins", binRoutes);
 
