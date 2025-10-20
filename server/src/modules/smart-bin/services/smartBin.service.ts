@@ -6,10 +6,31 @@ export class SmartBinService {
   constructor(private repo = smartBinRepository) {}
 
   async createBin(payload: Partial<IBin>) {
-    // enforce uniqueness of code
-    if (!payload.code) throw new Error("Bin code is required");
-    const existing = await this.repo.findByCode(payload.code);
-    if (existing) throw new Error("Bin with this code already exists");
+    if (!payload.type) throw new Error("Bin type is required");
+    if (!payload.qrCode) throw new Error("QR code is required");
+
+    // Validate ObjectId-like fields when provided as strings
+    if (
+      typeof payload.type === "string" &&
+      !Types.ObjectId.isValid(payload.type)
+    )
+      throw new Error("Invalid bin type id");
+    if (
+      typeof payload.qrCode === "string" &&
+      !Types.ObjectId.isValid(payload.qrCode)
+    )
+      throw new Error("Invalid QR code id");
+    if (
+      payload.qrCode &&
+      typeof payload.qrCode === "string" &&
+      !Types.ObjectId.isValid(payload.qrCode)
+    )
+      throw new Error("Invalid qrCode id");
+
+    // Validate optional numeric fields
+    if (payload.limit !== undefined && typeof payload.limit !== "number")
+      throw new Error("Limit must be a number");
+
     return this.repo.create(payload);
   }
 
