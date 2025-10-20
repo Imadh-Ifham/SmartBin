@@ -18,6 +18,10 @@ import {
   type GetMyInvoicesParams,
 } from "../../../api/payment/invoice.api";
 import { PageSkeleton } from "../../../components/LoadingSkeleton";
+import {
+  exportInvoicesCsv,
+  exportInvoicesPdf,
+} from "../services/exportInvoices";
 
 interface BillingDashboardProps {
   onPayNow: (invoice: Invoice) => void;
@@ -210,11 +214,19 @@ export function BillingDashboard({
               </TabsList>
 
               <div className="flex gap-2">
-                <Button variant="outline" size="sm">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => exportInvoicesPdf(invoices)}
+                >
                   <Download className="w-4 h-4 mr-2" />
                   Export PDF
                 </Button>
-                <Button variant="outline" size="sm">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => exportInvoicesCsv(invoices)}
+                >
                   <Download className="w-4 h-4 mr-2" />
                   Export CSV
                 </Button>
