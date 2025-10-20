@@ -1,7 +1,7 @@
 import request from "supertest";
 import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
-import { MongoMemoryServer } from "mongodb-memory-server";
+import { MongoMemoryReplSet } from "mongodb-memory-server";
 import app from "../../../app";
 import { UserModel } from "../../auth/models/user.model";
 import { InvoiceModel } from "../models/invoice.model";
@@ -30,7 +30,7 @@ jest.mock("../services/stripe.service", () => {
 });
 
 describe("/api/payments/pay (integration)", () => {
-  let mongod: MongoMemoryServer;
+  let replset: MongoMemoryReplSet;
   const JWT_SECRET = "test-secret";
 
   const signToken = (payload: { id: string; role: string }) =>
@@ -39,15 +39,19 @@ describe("/api/payments/pay (integration)", () => {
   beforeAll(async () => {
     process.env.JWT_SECRET = JWT_SECRET;
     process.env.PAYMENT_CURRENCY = "lkr";
-    mongod = await MongoMemoryServer.create();
-    const uri = mongod.getUri();
+    // Use a replica set for transaction support
+    replset = await MongoMemoryReplSet.create({
+      replSet: { storageEngine: "wiredTiger" },
+    });
+    const uri = replset.getUri();
     await mongoose.connect(uri);
+    // Use real sessions from Mongoose; no stubs to ensure transaction support
   });
 
   afterAll(async () => {
     await mongoose.disconnect();
     try {
-      await mongod.stop();
+      await replset.stop();
     } catch (e: any) {
       if (String(e?.message || e).includes("EPERM")) {
         console.warn(
@@ -94,7 +98,9 @@ describe("/api/payments/pay (integration)", () => {
         method: "Card",
         amount: 1500,
       });
-
+    // Debug response when failing locally
+    // eslint-disable-next-line no-console
+    console.log("/pay response:", res1.body);
     expect(res1.status).toBe(200);
     expect(res1.body).toEqual(
       expect.objectContaining({
