@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Download, FileText } from "lucide-react";
 import { Button } from "./ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
@@ -11,8 +11,13 @@ import {
   TableRow,
 } from "./ui/table";
 import { InvoiceStatusBadge } from "./InvoiceStatusBadge";
-import { mockInvoices } from "../data/mockInvoices";
 import type { Invoice, InvoiceStatus } from "../types/payment";
+import { useQuery } from "@tanstack/react-query";
+import {
+  apiGetMyInvoices,
+  type GetMyInvoicesParams,
+} from "../../../api/payment/invoice.api";
+import { PageSkeleton } from "../../../components/LoadingSkeleton";
 
 interface BillingDashboardProps {
   onPayNow: (invoice: Invoice) => void;
@@ -25,27 +30,66 @@ export function BillingDashboard({
 }: BillingDashboardProps) {
   const [activeTab, setActiveTab] = useState<string>("all");
 
-  const filterInvoices = (status?: InvoiceStatus) => {
-    if (!status) return mockInvoices;
-    return mockInvoices.filter((inv) => inv.status === status);
-  };
+  // Fetch invoices from backend for logged-in resident
+  type BackendStatus = GetMyInvoicesParams["status"];
 
-  const getFilteredInvoices = () => {
-    switch (activeTab) {
-      case "pending":
-        return filterInvoices("pending").concat(
-          mockInvoices.filter((i) => i.status === "overdue")
-        );
-      case "partially_paid":
-        return filterInvoices("partially_paid");
-      case "paid":
-        return filterInvoices("paid");
-      case "refunded":
-        return filterInvoices("refunded");
-      default:
-        return mockInvoices;
-    }
-  };
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["invoices", "me", { tab: activeTab }],
+    queryFn: async () => {
+      // Backend statuses are Title Case; map from UI tab values
+      const statusMap: Record<string, BackendStatus | undefined> = {
+        all: undefined,
+        pending: "Pending",
+        partially_paid: "Partially Paid",
+        paid: "Paid",
+        refunded: "Refunded",
+      };
+      const status: BackendStatus | undefined = statusMap[activeTab];
+      return apiGetMyInvoices(status ? { status } : undefined);
+    },
+    // Refetch when tab changes; cache handled globally in QueryClient
+  });
+
+  // Map backend DTOs to UI Invoice type
+  const invoices: Invoice[] = useMemo(() => {
+    const raw = data ?? [];
+    const toUiStatus = (s: string): InvoiceStatus => {
+      switch (s) {
+        case "Pending":
+          return "pending";
+        case "Paid":
+          return "paid";
+        case "Refunded":
+          return "refunded";
+        case "Partially Paid":
+          return "partially_paid";
+        default:
+          return "pending"; // fallback
+      }
+    };
+    const toUiReason = (r: string): Invoice["reason"] => {
+      const normalized = (r || "").toLowerCase();
+      if (normalized.includes("overweight")) return "Overweight Bin";
+      if (normalized.includes("special")) return "Special Collection";
+      if (normalized.includes("subscription")) return "Subscription Renewal";
+      if (normalized.includes("late")) return "Late Fee";
+      // default mapping
+      return "Overweight Bin";
+    };
+    return raw.map((inv) => ({
+      id: inv.id,
+      invoiceNumber: inv.id, // no separate number from backend yet
+      dateIssued: inv.createdAt,
+      dueDate: inv.dueDate ?? inv.createdAt,
+      amount: inv.amount,
+      reason: toUiReason(inv.reason),
+      originatingUseCase: "Payments",
+      status: toUiStatus(inv.status),
+      // lateFee/discount are not provided by backend Phase 2
+    }));
+  }, [data]);
+
+  // no-op
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-LK", {
@@ -62,7 +106,19 @@ export function BillingDashboard({
     });
   };
 
-  const invoices = getFilteredInvoices();
+  if (isLoading) {
+    return <PageSkeleton />;
+  }
+
+  if (isError) {
+    return (
+      <div className="p-8">
+        <div className="bg-red-50 border border-red-200 text-red-800 p-4 rounded">
+          Failed to load invoices. Please try again.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8">
@@ -85,9 +141,9 @@ export function BillingDashboard({
             style={{ fontSize: "24px", fontWeight: "600" }}
           >
             {formatCurrency(
-              mockInvoices
-                .filter((i) => i.status === "pending" || i.status === "overdue")
-                .reduce((sum, i) => sum + i.amount + (i.lateFee || 0), 0)
+              invoices
+                .filter((i) => i.status === "pending")
+                .reduce((sum, i) => sum + i.amount, 0)
             )}
           </p>
         </div>
@@ -101,9 +157,7 @@ export function BillingDashboard({
             style={{ fontSize: "24px", fontWeight: "600" }}
           >
             {formatCurrency(
-              mockInvoices
-                .filter((i) => i.status === "overdue")
-                .reduce((sum, i) => sum + i.amount + (i.lateFee || 0), 0)
+              0 // overdue not provided by backend yet
             )}
           </p>
         </div>
@@ -117,7 +171,7 @@ export function BillingDashboard({
             style={{ fontSize: "24px", fontWeight: "600" }}
           >
             {formatCurrency(
-              mockInvoices
+              invoices
                 .filter((i) => i.status === "paid")
                 .slice(0, 3)
                 .reduce((sum, i) => sum + i.amount, 0)
@@ -133,7 +187,7 @@ export function BillingDashboard({
             className="text-gray-900"
             style={{ fontSize: "24px", fontWeight: "600" }}
           >
-            {mockInvoices.length}
+            {invoices.length}
           </p>
         </div>
       </div>
@@ -202,24 +256,13 @@ export function BillingDashboard({
                         {invoice.reason}
                       </TableCell>
                       <TableCell className="text-gray-900">
-                        {formatCurrency(
-                          invoice.amount + (invoice.lateFee || 0)
-                        )}
-                        {invoice.lateFee && (
-                          <span
-                            className="text-red-600 ml-1"
-                            style={{ fontSize: "12px" }}
-                          >
-                            (+{formatCurrency(invoice.lateFee)} late fee)
-                          </span>
-                        )}
+                        {formatCurrency(invoice.amount)}
                       </TableCell>
                       <TableCell>
                         <InvoiceStatusBadge status={invoice.status} />
                       </TableCell>
                       <TableCell className="text-right">
-                        {(invoice.status === "pending" ||
-                          invoice.status === "overdue") && (
+                        {invoice.status === "pending" && (
                           <Button
                             size="sm"
                             onClick={() => onPayNow(invoice)}
