@@ -27,8 +27,8 @@ export class PaymentService {
     }
   }
 
-  async getInvoices(residentId: string) {
-    return await this.invoiceRepo.findByResident(residentId);
+  async getInvoices(userId: string) {
+    return await this.invoiceRepo.findPendingByUser(userId);
   }
 
   async processPayment(

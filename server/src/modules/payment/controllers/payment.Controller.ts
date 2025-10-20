@@ -7,10 +7,9 @@ const invoiceService = new InvoiceService();
 
 export const getInvoices = async (req: Request, res: Response) => {
   try {
-    const residentId = req.params.residentId as string | undefined;
-    if (!residentId)
-      return res.status(400).json({ message: "residentId is required" });
-    const invoices = await paymentService.getInvoices(residentId);
+    const userId = req.params.userId as string | undefined;
+    if (!userId) return res.status(400).json({ message: "userId is required" });
+    const invoices = await paymentService.getInvoices(userId);
     res.status(200).json(invoices);
   } catch (err: any) {
     res.status(500).json({ message: err.message });
@@ -66,7 +65,11 @@ export const applyDiscount = async (req: Request, res: Response) => {
 
 export const generateInvoice = async (req: Request, res: Response) => {
   try {
-    const invoice = await invoiceService.generateInvoice(req.body);
+    const actorId = (req as any).user?.id || "system";
+    const invoice = await invoiceService.createInvoice({
+      ...(req.body || {}),
+      actorId,
+    });
     res.status(201).json(invoice);
   } catch (err: any) {
     res.status(400).json({ message: err.message });
