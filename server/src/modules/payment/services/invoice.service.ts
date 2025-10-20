@@ -58,6 +58,8 @@ export class InvoiceService {
           reason: input.reason,
           metadata: input.metadata,
           status: "Pending",
+          paidToDate: 0,
+          outstanding: input.amount,
         });
 
         await this.audit.log({

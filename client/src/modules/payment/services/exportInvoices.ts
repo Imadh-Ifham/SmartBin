@@ -20,7 +20,9 @@ export function exportInvoicesCsv(invoices: Invoice[]) {
     "Date Issued",
     "Due Date",
     "Reason",
-    "Amount",
+    "Total Amount",
+    "Paid To Date",
+    "Outstanding",
     "Status",
   ];
   const rows = invoices.map((i) => [
@@ -29,6 +31,12 @@ export function exportInvoicesCsv(invoices: Invoice[]) {
     formatDate(i.dueDate),
     i.reason,
     formatCurrency(i.amount),
+    formatCurrency(
+      i.paidToDate ?? Math.max(0, i.amount - (i.outstanding ?? i.amount))
+    ),
+    formatCurrency(
+      i.outstanding ?? Math.max(0, i.amount - (i.paidToDate ?? 0))
+    ),
     i.status,
   ]);
 
@@ -70,7 +78,16 @@ export function exportInvoicesPdf(invoices: Invoice[]) {
   autoTable(doc, {
     startY: 110,
     head: [
-      ["Invoice ID", "Date Issued", "Due Date", "Reason", "Amount", "Status"],
+      [
+        "Invoice ID",
+        "Date Issued",
+        "Due Date",
+        "Reason",
+        "Total",
+        "Paid",
+        "Outstanding",
+        "Status",
+      ],
     ],
     body: invoices.map((i) => [
       i.invoiceNumber,
@@ -78,6 +95,12 @@ export function exportInvoicesPdf(invoices: Invoice[]) {
       formatDate(i.dueDate),
       i.reason,
       formatCurrency(i.amount),
+      formatCurrency(
+        i.paidToDate ?? Math.max(0, i.amount - (i.outstanding ?? i.amount))
+      ),
+      formatCurrency(
+        i.outstanding ?? Math.max(0, i.amount - (i.paidToDate ?? 0))
+      ),
       i.status,
     ]),
     styles: { font: "helvetica", fontSize: 10, cellPadding: 6 },

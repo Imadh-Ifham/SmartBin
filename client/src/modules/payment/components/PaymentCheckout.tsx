@@ -18,7 +18,7 @@ import { v4 as uuidv4 } from "uuid";
 
 interface PaymentCheckoutProps {
   invoice: Invoice;
-  onConfirmPayment: (method: PaymentMethod) => void;
+  onConfirmPayment: (method: PaymentMethod, paidAmount: number) => void;
   onBack: () => void;
 }
 
@@ -59,7 +59,7 @@ export function PaymentCheckout({
       setIsProcessing(true);
       if (paymentMethod !== "card") {
         // For now only Card uses Stripe. Bank/Wallet can be integrated later.
-        onConfirmPayment(paymentMethod);
+        onConfirmPayment(paymentMethod, total);
         return;
       }
 
@@ -91,10 +91,10 @@ export function PaymentCheckout({
       }
 
       // Success. Backend webhook or our immediate success already set invoice to Paid.
-      onConfirmPayment("card");
+      onConfirmPayment("card", total);
     } catch (e) {
       console.error(e);
-      onConfirmPayment("card"); // fall back to existing success/failure screen routing
+      onConfirmPayment("card", total); // fall back to success screen routing; amount still shown
     } finally {
       setIsProcessing(false);
     }

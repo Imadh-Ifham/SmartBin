@@ -7,6 +7,8 @@ export interface IInvoice extends Document {
   amount: number;
   reason: string;
   status: InvoiceStatus;
+  paidToDate?: number;
+  outstanding?: number;
   metadata?: any;
   createdAt: Date;
   updatedAt: Date;
@@ -29,6 +31,8 @@ const InvoiceSchema = new Schema<IInvoice>(
       default: "Pending",
       index: true,
     },
+    paidToDate: { type: Number, default: 0 },
+    outstanding: { type: Number },
     metadata: { type: Schema.Types.Mixed },
     dueDate: { type: Date },
   },

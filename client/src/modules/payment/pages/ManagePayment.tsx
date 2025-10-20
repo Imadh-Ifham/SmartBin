@@ -19,8 +19,11 @@ const ManagePayment = () => {
   const [failureReason] = useState<string>("");
   const [refundDialogOpen, setRefundDialogOpen] = useState(false);
 
-  // Optimistically mark an invoice as Paid in all invoice query caches and refetch in background
-  const markInvoicePaidOptimistic = (invoiceId: string) => {
+  // Optimistically update invoice after a payment (handles full or partial)
+  const markInvoiceAfterPaymentOptimistic = (
+    invoice: Invoice,
+    amountPaid: number
+  ) => {
     const entries = queryClient.getQueriesData<any>({ queryKey: ["invoices"] });
     for (const [key, data] of entries) {
       if (!Array.isArray(data)) continue;
@@ -30,13 +33,25 @@ const ManagePayment = () => {
         tab = (key as any)[2]?.tab;
       }
       const next = data
-        .map((inv: any) =>
-          inv.id === invoiceId ? { ...inv, status: "Paid" } : inv
-        )
-        // If this cache represents the Pending tab, remove the invoice immediately
-        .filter((inv: any) =>
-          inv.id === invoiceId && tab === "pending" ? false : true
-        );
+        .map((inv: Invoice) => {
+          if (inv.id !== invoice.id) return inv as any;
+          const previousOutstanding = inv.outstanding ?? inv.amount;
+          const newOutstanding = Math.max(0, previousOutstanding - amountPaid);
+          const newStatus = newOutstanding === 0 ? "paid" : "partially_paid";
+          return {
+            ...inv,
+            status: newStatus,
+            paidToDate:
+              (inv.paidToDate ?? inv.amount - previousOutstanding) + amountPaid,
+            outstanding: newOutstanding,
+          } as any;
+        })
+        // If tab is pending and invoice moved to another status, remove it
+        .filter((inv: Invoice) => {
+          if (inv.id !== invoice.id) return true;
+          if (tab === "pending" && inv.status !== "pending") return false;
+          return true;
+        });
       queryClient.setQueryData(key, next);
     }
     // Kick off background refetch so we stay consistent with server
@@ -58,22 +73,37 @@ const ManagePayment = () => {
     }
   };
 
-  const handleConfirmPayment = (method: PaymentMethod) => {
+  const handleConfirmPayment = (method: PaymentMethod, paidAmount: number) => {
     if (!selectedInvoice) return;
     // This method is now called after Stripe confirm in PaymentCheckout; we treat it as success path.
     const payment: Payment = {
       id: `PAY-${Date.now()}`,
       invoiceId: selectedInvoice.id,
-      amount: selectedInvoice.amount + (selectedInvoice.lateFee || 0),
+      amount: paidAmount,
       method,
       timestamp: new Date().toISOString(),
       status: "success",
     };
 
+    // Update selected invoice for success screen (so receipt shows correct subtotals)
+    const prevOutstanding =
+      selectedInvoice.outstanding ?? selectedInvoice.amount;
+    const newOutstanding = Math.max(0, prevOutstanding - paidAmount);
+    const newPaidToDate =
+      (selectedInvoice.paidToDate ?? selectedInvoice.amount - prevOutstanding) +
+      paidAmount;
+    const updatedInvoice: Invoice = {
+      ...selectedInvoice,
+      status: newOutstanding === 0 ? "paid" : "partially_paid",
+      outstanding: newOutstanding,
+      paidToDate: newPaidToDate,
+    };
+
+    setSelectedInvoice(updatedInvoice);
     setCurrentPayment(payment);
     setCurrentScreen("success");
-    // Optimistically reflect Paid status and update dashboard summaries
-    markInvoicePaidOptimistic(selectedInvoice.id);
+    // Optimistically reflect updated status/outstanding in caches
+    markInvoiceAfterPaymentOptimistic(selectedInvoice, paidAmount);
     toast.success("Payment Successful", { duration: 3000 });
   };
 

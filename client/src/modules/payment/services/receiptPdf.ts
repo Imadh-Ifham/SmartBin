@@ -94,7 +94,8 @@ export function generateReceiptPdf(
   };
 
   addRow("Invoice Reason", invoice.reason);
-  addRow("Subtotal", formatCurrency(invoice.amount));
+  const subtotal = invoice.outstanding ?? invoice.amount;
+  addRow("Subtotal", formatCurrency(subtotal));
   if (invoice.discount)
     addRow("Discount", `- ${formatCurrency(invoice.discount)}`);
   if (invoice.lateFee) addRow("Late Fee", formatCurrency(invoice.lateFee));
