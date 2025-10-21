@@ -1,10 +1,9 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import "./App.css";
-import { AdminLayout, CollectorLayout } from "../layouts";
+import { AdminLayout } from "../layouts";
 import RequireAdmin from "../components/RequireAdmin";
 import ErrorBoundary from "../components/ErrorBoundary";
-import TrackerPage from "../modules/collector/pages/TrackerPage";
 import ScannerPage from "../modules/collector/pages/ScannerPage";
 import { AdminPoliciesPage, PolicyReviewPage } from "../modules/policies";
 import PolicyFormPage from "../modules/policies/pages/PolicyFormPage";
@@ -36,11 +35,7 @@ const App = () => {
           {userProtectedRoutes}
 
           {/* Collector App Routes */}
-          <Route path="/collector" element={<CollectorLayout />}>
-            <Route index element={<Navigate to="tracker" />} />
-            <Route path="tracker" element={<TrackerPage />} />
-            <Route path="scanner" element={<ScannerPage />} />
-          </Route>
+          <Route path="/collector" element={<ScannerPage />} />
 
           <Route path="/smart-bin" element={<SmartBin />} />
 

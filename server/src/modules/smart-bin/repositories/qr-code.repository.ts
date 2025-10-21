@@ -8,7 +8,8 @@ export class QRCodeRepository {
   }
 
   async findByCode(code: string) {
-    return QRCode.findOne({ code });
+    if (!code?.trim()) throw new Error("QR code is required");
+    return QRCode.findOne({ code }, { createdAt: 0, updatedAt: 0 });
   }
 
   async findById(id: string) {

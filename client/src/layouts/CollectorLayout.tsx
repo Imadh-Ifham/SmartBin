@@ -9,13 +9,26 @@ const DesktopTopNav: React.FC = () => {
   ];
 
   return (
-    <header className="navbar" style={{ display: 'none' }}>
+    <header className="navbar" style={{ display: "none" }}>
       <div className="navbar-container">
-        <div style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 'var(--font-weight-bold)', color: 'var(--color-gray-900)' }}>SmartBin Collector</div>
+        <div
+          style={{
+            fontSize: "var(--font-size-2xl)",
+            fontWeight: "var(--font-weight-bold)",
+            color: "var(--color-gray-900)",
+          }}
+        >
+          SmartBin Collector
+        </div>
         <nav className="navbar-menu">
           {navs.map((nav) => (
             <li key={nav.to} className="navbar-item">
-              <Link to={nav.to} className={`navbar-link ${location.pathname === nav.to ? 'active' : ''}`}>
+              <Link
+                to={nav.to}
+                className={`navbar-link ${
+                  location.pathname === nav.to ? "active" : ""
+                }`}
+              >
                 {nav.name}
               </Link>
             </li>
@@ -27,7 +40,17 @@ const DesktopTopNav: React.FC = () => {
 };
 
 const MobileTopNav: React.FC = () => (
-  <header style={{ backgroundColor: 'var(--color-secondary)', color: 'white', padding: 'var(--spacing-3)', textAlign: 'center', fontSize: 'var(--font-size-lg)', fontWeight: 'var(--font-weight-semibold)', boxShadow: 'var(--shadow-sm)' }}>
+  <header
+    style={{
+      backgroundColor: "var(--color-secondary)",
+      color: "white",
+      padding: "var(--spacing-3)",
+      textAlign: "center",
+      fontSize: "var(--font-size-lg)",
+      fontWeight: "var(--font-weight-semibold)",
+      boxShadow: "var(--shadow-sm)",
+    }}
+  >
     SmartBin Collector
   </header>
 );
@@ -41,7 +64,20 @@ const BottomNav: React.FC = () => {
   ];
 
   return (
-    <nav style={{ display: 'none', position: 'fixed', bottom: 0, width: '100%', backgroundColor: 'white', borderTop: `var(--border-width-base) solid var(--color-gray-200)`, justifyContent: 'space-around', alignItems: 'center', height: '4rem', boxShadow: 'var(--shadow-md)' }}>
+    <nav
+      style={{
+        display: "none",
+        position: "fixed",
+        bottom: 0,
+        width: "100%",
+        backgroundColor: "white",
+        borderTop: `var(--border-width-base) solid var(--color-gray-200)`,
+        justifyContent: "space-around",
+        alignItems: "center",
+        height: "4rem",
+        boxShadow: "var(--shadow-md)",
+      }}
+    >
       {navs.map((nav) => (
         <Link
           key={nav.to}
@@ -52,7 +88,7 @@ const BottomNav: React.FC = () => {
               : "text-gray-600 hover:bg-gray-100"
           }`}
         >
-          <span style={{ fontSize: 'var(--font-size-lg)' }}>{nav.icon}</span>
+          <span style={{ fontSize: "var(--font-size-lg)" }}>{nav.icon}</span>
           {nav.name}
         </Link>
       ))}
@@ -62,13 +98,20 @@ const BottomNav: React.FC = () => {
 
 const CollectorLayout: React.FC = () => {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: 'var(--color-dark-bg)' }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        minHeight: "100vh",
+        backgroundColor: "var(--color-dark-bg)",
+      }}
+    >
       {/* Top nav */}
       <DesktopTopNav />
       <MobileTopNav />
 
       {/* Main content */}
-      <main style={{ flex: 1, padding: 'var(--spacing-4)', overflowY: 'auto' }}>
+      <main style={{ flex: 1, padding: "var(--spacing-4)", overflowY: "auto" }}>
         <Outlet />
       </main>
 

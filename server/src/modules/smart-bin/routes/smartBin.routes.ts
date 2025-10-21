@@ -1,16 +1,15 @@
 import { Router } from "express";
-import {
-  SmartBinController,
-  asyncHandler,
-} from "../controllers/smartBin.controller";
+import { SmartBinController } from "../controllers/smartBin.controller";
 import { authenticate } from "../../../middleware/authenticate";
 import { verifyAuthority } from "../../../middleware/verifyAuthority";
+import { asyncHandler } from "../../../middleware/asyncHandler";
 
 const router = Router();
 
 // public
 router.get("/", asyncHandler(SmartBinController.list));
-router.get("/:id", asyncHandler(SmartBinController.get));
+router.get("/:id", asyncHandler(SmartBinController.getById));
+router.get("/code/:qrCode", asyncHandler(SmartBinController.getByQRCode));
 
 // actions
 router.post(
@@ -34,20 +33,7 @@ router.delete(
 
 router.post(
   "/:id/report-weight",
-  authenticate,
   asyncHandler(SmartBinController.reportWeight)
-);
-router.post(
-  "/:id/start-maintenance",
-  authenticate,
-  verifyAuthority,
-  asyncHandler(SmartBinController.startMaintenance)
-);
-router.post(
-  "/:id/finish-maintenance",
-  authenticate,
-  verifyAuthority,
-  asyncHandler(SmartBinController.finishMaintenance)
 );
 
 export default router;
