@@ -81,8 +81,9 @@ export class AuthService {
 
   async login(email: string, password: string) {
     // First, check for reserved admin credentials (fixed admin login via ENV)
-    const envAdminUser = process.env.ADMIN_USERNAME ?? "admin";
-    const envAdminPass = process.env.ADMIN_PASSWORD ?? "admin123";
+  // Default admin credentials for local/dev testing. In production override via ENV.
+  const envAdminUser = process.env.ADMIN_USERNAME ?? "admin@gmail.com";
+  const envAdminPass = process.env.ADMIN_PASSWORD ?? "admin123";
 
     if (email === envAdminUser) {
       // validate against ENV password (no DB lookup required)

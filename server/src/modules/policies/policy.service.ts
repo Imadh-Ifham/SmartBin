@@ -292,7 +292,41 @@ export class PolicyService {
     if (reviewerId) auditEntry.user = reviewerId;
     policy.auditTrail.push(auditEntry);
 
-    return policyRepository.update(policy);
+    // Run Mongoose validation before attempting to persist. If validation fails
+    // we throw a structured error (status 400) with field-level details so the
+    // controller can return an actionable response instead of a generic 500.
+    try {
+      const validationError = (policy as any).validateSync?.();
+      if (validationError) {
+        const details: Record<string, any> = {};
+        Object.entries(validationError.errors || {}).forEach(([k, v]: any) => {
+          details[k] = v && v.message ? v.message : String(v);
+        });
+        const err: any = new Error('Validation failed');
+        err.status = 400;
+        err.details = details;
+        throw err;
+      }
+    } catch (e) {
+      // If we threw a structured validation error above, rethrow it. Otherwise
+      // log and rethrow to be handled by controller/global error handler.
+      if (e && (e as any).status === 400) throw e;
+      const errMsg = e && (((e as any).stack) || ((e as any).message) || String(e));
+      console.error('Unexpected validation check error in PolicyService.update:', errMsg);
+      throw e;
+    }
+S
+    try {
+      const updated = await policyRepository.update(policy);
+      return updated;
+    } catch (err) {
+      const errMsg = (err as any) && (((err as any).stack) || ((err as any).message) || String(err));
+      console.error('Failed to persist updated policy:', errMsg);
+      const e: any = new Error('Failed to persist policy');
+      e.status = 500;
+      e.details = {};
+      throw e;
+    }
   }
 
   /**
@@ -346,7 +380,17 @@ export class PolicyService {
     // Persist changes and then attempt to notify stakeholders if present. The
     // notification is best-effort and is guarded with try/catch to avoid aborting
     // the approval flow on notification failures.
-    const updatedPolicy = await policyRepository.update(policy);
+    let updatedPolicy: any;
+    try {
+      updatedPolicy = await policyRepository.update(policy);
+    } catch (err) {
+      const errMsg = (err as any) && (((err as any).stack) || ((err as any).message) || String(err));
+      console.error('Failed to persist approved policy:', errMsg);
+      const e: any = new Error('Failed to persist policy on approve');
+      e.status = 500;
+      e.details = {};
+      throw e;
+    }
 
     try {
       const policyData = policy as any;

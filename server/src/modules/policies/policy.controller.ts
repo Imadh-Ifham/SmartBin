@@ -159,6 +159,13 @@ export class PolicyControllerClass {
     } catch (e: any) {
       if (e instanceof z.ZodError)
         return sendError(res, 400, ERROR_MESSAGES.VALIDATION_FAILED, e.issues);
+      // Service can throw domain errors with a status (e.g., 409 for compliance failures).
+      if (e && typeof e.status === 'number') {
+        const status = e.status === 409 ? 409 : 500;
+        return sendError(res, status, e.message || ERROR_MESSAGES.SERVER_ERROR, e.details);
+      }
+      // Unexpected error: log full error for debugging before returning generic 500
+      console.error('Unexpected error in PolicyController.update:', e && (e.stack || e.message || e));
       return sendError(res, 500, ERROR_MESSAGES.SERVER_ERROR);
     }
   };
@@ -179,7 +186,14 @@ export class PolicyControllerClass {
       if (!policy) return sendError(res, 404, ERROR_MESSAGES.POLICY_NOT_FOUND);
 
       return res.json({ policy });
-    } catch {
+    } catch (e: any) {
+      // Surface domain errors (e.g., compliance failures) as their intended status code
+      if (e && typeof e.status === 'number') {
+        const status = e.status === 409 ? 409 : 500;
+        return sendError(res, status, e.message || ERROR_MESSAGES.SERVER_ERROR, e.details);
+      }
+      // Unexpected error: log full error for debugging before returning generic 500
+      console.error('Unexpected error in PolicyController.approve:', e && (e.stack || e.message || e));
       return sendError(res, 500, ERROR_MESSAGES.SERVER_ERROR);
     }
   };

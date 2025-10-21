@@ -12,9 +12,24 @@ export const LoginScreen = () => {
       onLogin={async (credentials) => {
         try {
           const res = await login.mutateAsync(credentials);
-          const display = res.user.fullName || res.user.username;
+          const display = res.user.fullName || res.user.username || res.user.email;
           toast.success(`Login successful. Welcome back, ${display}!`);
-          navigate("/home");
+
+          // Persist basic session info for route guards and UI
+          try {
+            localStorage.setItem("role", res.user.role);
+            localStorage.setItem("username", res.user.username || res.user.email || "");
+            localStorage.setItem("loginTime", new Date().toISOString());
+          } catch (err) {
+            // ignore storage errors
+          }
+
+          // Send admin/authority users to admin dashboard, others to home
+          if (res.user.role === "admin" || res.user.role === "authority") {
+            navigate("/admin/dashboard");
+          } else {
+            navigate("/home");
+          }
         } catch (e: any) {
           const msg =
             e?.response?.data?.message || "Please check your credentials.";
