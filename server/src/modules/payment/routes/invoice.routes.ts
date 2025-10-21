@@ -2,12 +2,16 @@ import { Router } from "express";
 import { authenticate } from "../../../middleware/authenticate";
 import { verifyAuthority } from "../../../middleware/verifyAuthority";
 import { validateRequest } from "../../../middleware/validateRequest";
-import { CreateInvoiceSchema } from "../types/invoice.dto";
+import {
+  CreateInvoiceSchema,
+  CreateOverweightInvoiceSchema,
+} from "../types/invoice.dto";
 import {
   generateInvoice,
   getUnpaidStatus,
   getMyInvoices,
   getInvoicesByUser,
+  generateOverweightInvoice,
 } from "../controllers/invoice.controller";
 
 const router = Router();
@@ -18,6 +22,14 @@ router.post(
   verifyAuthority,
   validateRequest({ body: CreateInvoiceSchema }),
   generateInvoice
+);
+
+router.post(
+  "/generateOverweightInvoice",
+  authenticate,
+  verifyAuthority,
+  validateRequest({ body: CreateOverweightInvoiceSchema }),
+  generateOverweightInvoice
 );
 
 router.get("/status/:userId", authenticate, verifyAuthority, getUnpaidStatus);
