@@ -1,21 +1,8 @@
 import React from "react";
+import type { Bin } from "../types/bin";
 
-interface Bin {
-  id: number;
-  type: string;
-  currentWeight: number;
-  limit: number;
-}
-
-interface Props {
-  bins: Bin[];
-  form: { id: number; weight: number };
-  setForm: (f: { id: number; weight: number }) => void;
-  onUpdate: () => void;
-}
-
-const WeightForm: React.FC<Props> = ({ bins, form, setForm, onUpdate }) => {
-  const selectedBin = bins.find((b) => b.id === form.id)!;
+const WeightForm: React.FC = () => {
+  const selectedBin = bins.find((b) => b._id === form.id)!;
   const percent = (selectedBin.currentWeight / selectedBin.limit) * 100;
   const exceeded = selectedBin.currentWeight > selectedBin.limit;
 
@@ -33,7 +20,7 @@ const WeightForm: React.FC<Props> = ({ bins, form, setForm, onUpdate }) => {
       <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
         <div className="flex justify-between items-center mb-2">
           <span className="font-semibold">{selectedBin.type} Bin</span>
-          <span className="text-sm text-gray-500">Bin #{selectedBin.id}</span>
+          <span className="text-sm text-gray-500">Bin #{selectedBin._id}</span>
         </div>
 
         <div className="w-full h-4 bg-gray-200 rounded-full overflow-hidden">
@@ -65,8 +52,8 @@ const WeightForm: React.FC<Props> = ({ bins, form, setForm, onUpdate }) => {
           onChange={(e) => setForm({ ...form, id: Number(e.target.value) })}
         >
           {bins.map((bin) => (
-            <option key={bin.id} value={bin.id}>
-              {bin.type} (Bin #{bin.id})
+            <option key={bin._id} value={bin._id}>
+              {bin.type} (Bin #{bin._id})
             </option>
           ))}
         </select>
@@ -78,7 +65,9 @@ const WeightForm: React.FC<Props> = ({ bins, form, setForm, onUpdate }) => {
           type="number"
           className="border p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
           value={form.weight}
-          onChange={(e) => setForm({ ...form, weight: Number(e.target.value) })}
+          onChange={(e) =>
+            setForm({ id: Number(form.id), weight: Number(e.target.value) })
+          }
         />
 
         <button

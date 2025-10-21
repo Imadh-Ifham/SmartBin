@@ -13,4 +13,6 @@ router.post(
   asyncHandler(QRCodeController.create)
 );
 
+router.get("/:code", asyncHandler(QRCodeController.getBin));
+
 export default router;

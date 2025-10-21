@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from "express";
+import { Request, Response } from "express";
 import { z } from "zod";
 import { qrCodeService } from "../services/qr-code.service";
 
@@ -34,6 +34,21 @@ export const QRCodeController = {
     } catch (e: any) {
       if (e instanceof z.ZodError)
         return sendError(res, 400, "Validation failed", e.issues);
+      return sendError(res, 500, e.message || "Server error");
+    }
+  },
+
+  getBin: async (req: Request, res: Response) => {
+    try {
+      const code = req.params.code;
+      const result = await qrCodeService.getByCode(code as string);
+      if (!result) {
+        return sendError(res, 404, "QR Code not found");
+      }
+      return res
+        .status(200)
+        .json({ message: "Successfully retrieved QR Code", item: result });
+    } catch (e: any) {
       return sendError(res, 500, e.message || "Server error");
     }
   },

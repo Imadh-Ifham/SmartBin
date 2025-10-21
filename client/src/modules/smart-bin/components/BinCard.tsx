@@ -1,11 +1,7 @@
 import React from "react";
-
-interface Bin {
-  id: number;
-  type: string;
-  currentWeight: number;
-  limit: number;
-}
+import type { Bin } from "../types/bin";
+import { selectBinTypes } from "../slices/binSlice";
+import { useSelector } from "react-redux";
 
 const getProgressColor = (bin: Bin) => {
   const percent = (bin.currentWeight / bin.limit) * 100;
@@ -18,6 +14,8 @@ const BinCard: React.FC<{ bin: Bin }> = ({ bin }) => {
   const percent = (bin.currentWeight / bin.limit) * 100;
   const exceeded = percent > 100;
 
+  const binTypes = useSelector(selectBinTypes);
+
   return (
     <div className="relative w-44 h-56 flex flex-col items-center">
       {/* Bin top lid */}
@@ -28,9 +26,11 @@ const BinCard: React.FC<{ bin: Bin }> = ({ bin }) => {
         {/* Bin type label */}
         <div className="text-center mt-1">
           <h3 className="text-base font-semibold text-gray-800 leading-tight">
-            {bin.type}
+            {binTypes.find((type) => type._id === bin.type)?.name || bin.type}
           </h3>
-          <p className="text-xs text-gray-500">#{bin.id}</p>
+          <p className="text-xs text-gray-500">
+            #{bin._id.slice(0, 2)}...{bin._id.slice(-4)}
+          </p>
         </div>
 
         {/* Progress bar inside the bin */}
@@ -46,11 +46,11 @@ const BinCard: React.FC<{ bin: Bin }> = ({ bin }) => {
         {/* Weight info below */}
         <div className="text-xs text-center mt-2">
           <p className="text-gray-700 font-medium">
-            {bin.currentWeight}kg / {bin.limit}kg
+            {bin.currentWeight} unit / {bin.limit} unit
           </p>
           {exceeded && (
             <p className="text-red-600 font-semibold">
-              +{(bin.currentWeight - bin.limit).toFixed(1)}kg
+              +{(bin.currentWeight - bin.limit).toFixed(1)} unit over
             </p>
           )}
         </div>

@@ -109,8 +109,8 @@ export class QRCodeService {
     const qr = await this.repo.findByCode(code);
     if (!qr) return null;
     // ask the bin service to find a bin by this qr code
-    const bin = await this.binService.getBin(undefined, qr.code as string);
-    return { qr, bin };
+    const bins = await this.binService.getBin(undefined, qr._id.toString());
+    return { qr, bins };
   }
 }
 
