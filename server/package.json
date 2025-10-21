@@ -13,7 +13,7 @@
     "test": "jest --coverage",
     "test:watch": "jest --watch",
     "test:smart-bin": "jest --coverage --collectCoverageFrom='src/modules/smart-bin/**/{models,repositories,services}/**/*.ts' --coverageDirectory=coverage/smart-bin",
-    "test:payment": "jest --coverage --collectCoverageFrom='src/modules/payment/**/{models,repositories,services}/**/*.ts' --coverageDirectory=coverage/payment"
+    "test:payment": "jest --coverage --testPathPattern='src/modules/payment/.*\\.test\\.ts$' --collectCoverageFrom='src/modules/payment/**/{models,repositories,services}/**/*.ts' --coverageDirectory=coverage/payment"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

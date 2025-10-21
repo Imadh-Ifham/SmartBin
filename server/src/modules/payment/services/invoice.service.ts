@@ -7,6 +7,11 @@ import {
 } from "../types/invoice.dto";
 import { AuditService } from "../services/audit.service";
 import { UserRepository } from "../../auth/repositories/user.repository";
+import {
+  getDiscountBounds,
+  getDuplicateWindowMs,
+  getOverweightRateLkr,
+} from "../../../config/pricing";
 
 export class InvoiceService {
   private repo = new InvoiceRepository();
@@ -16,12 +21,13 @@ export class InvoiceService {
 
   async calculateOverweight(actualWeight: number, allowedWeight: number) {
     const excess = Math.max(0, actualWeight - allowedWeight);
-    const ratePerKg = 250; // LKR per kg (example)
+    const ratePerKg = getOverweightRateLkr();
     return { excessKg: excess, fee: excess * ratePerKg };
   }
 
   async applyDiscount(amount: number, discountPercent: number) {
-    const discount = Math.max(0, Math.min(100, discountPercent));
+    const { min, max } = getDiscountBounds();
+    const discount = Math.max(min, Math.min(max, discountPercent));
     const discountValue = (amount * discount) / 100;
     return {
       original: amount,
@@ -43,7 +49,9 @@ export class InvoiceService {
       input.actualWeight,
       input.allowedWeight
     );
-    const rate = input.ratePerKg && input.ratePerKg > 0 ? input.ratePerKg : 250;
+    const defaultRate = getOverweightRateLkr();
+    const rate =
+      input.ratePerKg && input.ratePerKg > 0 ? input.ratePerKg : defaultRate;
     const finalFee = input.ratePerKg ? excessKg * rate : fee; // allow overriding rate
 
     if (finalFee <= 0) {
@@ -102,7 +110,7 @@ export class InvoiceService {
     const recent = await this.repo.findRecentPendingByUserAndReason(
       userId,
       reason,
-      5 * 60 * 1000
+      getDuplicateWindowMs()
     );
     return !!recent;
   }
