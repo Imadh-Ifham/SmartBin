@@ -57,7 +57,18 @@ export interface PolicyQuery {
 const toObjectId = (id?: string) =>
   id && Types.ObjectId.isValid(id) ? new Types.ObjectId(id) : undefined;
 
+/**
+ * PolicyService
+ * Core business logic for managing policies: create, update, approve, list, audit, compliance, feedback, and versioning.
+ * All methods are static and operate on DTOs and Mongoose models.
+ */
 export class PolicyService {
+  /**
+   * Create a new policy
+   * @param {PolicyCreateDTO} data - Policy creation data
+   * @param {ServiceOptions} [options] - Service options (e.g., userId)
+   * @returns {Promise<IPolicy>} The created policy document
+   */
   static async create(data: PolicyCreateDTO, options: ServiceOptions = {}): Promise<IPolicy> {
     const reviewerId = toObjectId(data.lastReviewedBy) || toObjectId(options.userId);
     const feedback = (data.feedback ?? []).map(({ stakeholderType, message }) => ({
@@ -91,6 +102,13 @@ export class PolicyService {
     return saved;
   }
 
+  /**
+   * Request feedback from stakeholders for a policy
+   * @param {string} id - Policy ObjectId string
+   * @param {{ stakeholderGroups?: string[]; message?: string }} payload - Feedback request details
+   * @param {ServiceOptions} [options] - Service options
+   * @returns {Promise<{ policyId: string; requestedTo: string[]; message: string } | null>} Feedback request result or null if not found
+   */
   static async requestFeedback(id: string, payload: { stakeholderGroups?: string[]; message?: string }, options: ServiceOptions = {}) {
     if (!Types.ObjectId.isValid(id)) return null;
     const policy = await policyRepository.findById(id);
@@ -116,6 +134,11 @@ export class PolicyService {
     return { policyId: policy._id, requestedTo: groups, message };
   }
 
+  /**
+   * Enrich a policy with performance, violations, feedback summary, and compliance status
+   * @param {any} policy - Policy object
+   * @returns {Promise<any>} Enriched policy object
+   */
   private static async enrichPolicy(policy: any): Promise<any> {
     try {
       const [perf, violations, feedbackSummary, compliance] = await Promise.all([
@@ -138,6 +161,11 @@ export class PolicyService {
     }
   }
 
+  /**
+   * List policies matching filters, with enrichment
+   * @param {PolicyQuery} filters - Query filters (q, category, ministry, status, complianceStatus)
+   * @returns {Promise<IPolicy[]>} Array of enriched policy documents
+   */
   static async list(filters: PolicyQuery): Promise<IPolicy[]> {
     const query: FilterQuery<IPolicy> = {};
     if (filters.q) {
@@ -153,12 +181,25 @@ export class PolicyService {
     return Promise.all(policies.map(p => this.enrichPolicy(p)));
   }
 
-  static async get(id: string) {
+  /**
+   * Get a single policy by ObjectId
+   * @param {string} id - Policy ObjectId string
+   * @returns {Promise<IPolicy|null>} Policy document or null if not found/invalid
+   */
+  static async get(id: string): Promise<IPolicy|null> {
     if (!Types.ObjectId.isValid(id)) return null;
     return policyRepository.findById(id);
   }
 
-  static async update(id: string, update: PolicyUpdateDTO, options: ServiceOptions = {}) {
+  /**
+   * Update a policy by ObjectId
+   * @param {string} id - Policy ObjectId string
+   * @param {PolicyUpdateDTO} update - Update data
+   * @param {ServiceOptions} [options] - Service options
+   * @returns {Promise<IPolicy|null>} Updated policy document or null if not found/invalid
+   * @throws {Error} If compliance check fails (409)
+   */
+  static async update(id: string, update: PolicyUpdateDTO, options: ServiceOptions = {}): Promise<IPolicy|null> {
     if (!Types.ObjectId.isValid(id)) return null;
     const policy = await policyRepository.findById(id);
     if (!policy) return null;
@@ -217,7 +258,14 @@ export class PolicyService {
     return policyRepository.update(policy);
   }
 
-  static async approve(id: string, options: ServiceOptions = {}) {
+  /**
+   * Approve a policy, activating it and notifying stakeholders
+   * @param {string} id - Policy ObjectId string
+   * @param {ServiceOptions} [options] - Service options
+   * @returns {Promise<IPolicy|null>} Approved policy document or null if not found/invalid
+   * @throws {Error} If compliance check fails (409)
+   */
+  static async approve(id: string, options: ServiceOptions = {}): Promise<IPolicy|null> {
     if (!Types.ObjectId.isValid(id)) return null;
     const policy = await policyRepository.findById(id);
     if (!policy) return null;
@@ -280,25 +328,42 @@ export class PolicyService {
     return updatedPolicy;
   }
 
-  static async versions(id: string) {
+  /**
+   * Get all versions for a policy
+   * @param {string} id - Policy ObjectId string
+   * @returns {Promise<any[]|null>} Array of PolicyVersion documents or null if invalid id
+   */
+  static async versions(id: string): Promise<any[]|null> {
     if (!Types.ObjectId.isValid(id)) return null;
     // return stored PolicyVersion entries for the given policy id
     const pid = new Types.ObjectId(id);
     return PolicyVersion.find({ policyId: pid }).sort({ createdAt: -1 }).lean();
   }
 
-  static async audit(id: string) {
+  /**
+   * Get audit trail for a policy
+   * @param {string} id - Policy ObjectId string
+   * @returns {Promise<any[]|null>} Array of audit entries or null if not found/invalid
+   */
+  static async audit(id: string): Promise<any[]|null> {
     if (!Types.ObjectId.isValid(id)) return null;
     const policy = await policyRepository.findById(id);
     if (!policy) return null;
     return policy.auditTrail || [];
   }
 
+  /**
+   * Flag an issue on a policy
+   * @param {string} id - Policy ObjectId string
+   * @param {string} issue - Issue description
+   * @param {ServiceOptions} [options] - Service options
+   * @returns {Promise<any|null>} Updated policy document or null if not found/invalid
+   */
   static async markIssue(
     id: string,
     issue: string,
     options: ServiceOptions = {}
-  ) {
+  ): Promise<any|null> {
     if (!Types.ObjectId.isValid(id)) return null;
     const policy = await Policy.findById(id);
     if (!policy) return null;
@@ -317,7 +382,13 @@ export class PolicyService {
     return policy.save();
   }
 
-  static async revalidateCompliance(id: string, options: ServiceOptions = {}) {
+  /**
+   * Revalidate compliance for a policy, updating status and notifying stakeholders if changed
+   * @param {string} id - Policy ObjectId string
+   * @param {ServiceOptions} [options] - Service options
+   * @returns {Promise<{ policy: IPolicy, complianceResult: any, statusChanged: boolean }|null>} Result object or null if not found/invalid
+   */
+  static async revalidateCompliance(id: string, options: ServiceOptions = {}): Promise<{ policy: IPolicy, complianceResult: any, statusChanged: boolean }|null> {
     if (!Types.ObjectId.isValid(id)) return null;
     const policy = await policyRepository.findById(id);
     if (!policy) return null;
@@ -376,7 +447,12 @@ export class PolicyService {
     };
   }
 
-  static async remove(id: string) {
+  /**
+   * Remove (delete) a policy by ObjectId
+   * @param {string} id - Policy ObjectId string
+   * @returns {Promise<any|null>} Result of deletion or null if invalid id
+   */
+  static async remove(id: string): Promise<any|null> {
     if (!Types.ObjectId.isValid(id)) return null;
     return policyRepository.deleteById(id);
   }

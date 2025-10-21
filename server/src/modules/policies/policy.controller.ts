@@ -9,60 +9,34 @@ const ERROR_MESSAGES = {
   VALIDATION_FAILED: "Validation failed",
   SERVER_ERROR: "Server error",
   INVALID_ID: "Invalid id",
-  POLICY_NOT_FOUND: "Policy not found",
+  POLICY_NOT_FOUND: "Policy not found"
 };
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-=======
-// Use Zod's refinement context for transform callbacks. We cast to any when
-// calling addIssue to avoid tight coupling to Zod internal issue shapes.
->>>>>>> Stashed changes
-=======
-// Use Zod's refinement context for transform callbacks. We cast to any when
-// calling addIssue to avoid tight coupling to Zod internal issue shapes.
->>>>>>> Stashed changes
+/**
+ * Zod schema for feedback date
+ * Accepts string or Date, transforms to Date, validates format
+ */
 export const feedbackDateSchema = z
   .union([z.string(), z.date()])
   .transform((value: string | Date, ctx: any) => {
     if (value instanceof Date) return value;
     const normalized = String(value ?? "").trim();
     if (!normalized) {
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-      (ctx.addIssue as any)({
-        code: z.ZodIssueCode.custom,
-        message: "Invalid date",
-      });
-=======
-      // Zod expects a specific issue shape; cast to any to satisfy TS
       (ctx as any).addIssue?.({ code: z.ZodIssueCode.custom as any, message: "Invalid date" });
->>>>>>> Stashed changes
-=======
-      // Zod expects a specific issue shape; cast to any to satisfy TS
-      (ctx as any).addIssue?.({ code: z.ZodIssueCode.custom as any, message: "Invalid date" });
->>>>>>> Stashed changes
       return z.NEVER;
     }
     const parsed = new Date(normalized);
     if (Number.isNaN(parsed.getTime())) {
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-      (ctx.addIssue as any)({
-        code: z.ZodIssueCode.custom,
-        message: "Invalid date",
-      });
-=======
       (ctx as any).addIssue?.({ code: z.ZodIssueCode.custom as any, message: "Invalid date" });
->>>>>>> Stashed changes
-=======
-      (ctx as any).addIssue?.({ code: z.ZodIssueCode.custom as any, message: "Invalid date" });
->>>>>>> Stashed changes
       return z.NEVER;
     }
     return parsed;
   });
 
+/**
+ * Zod schema for feedback object
+ * Validates stakeholderType, message, and date
+ */
 export const feedbackSchema = z.object({
   stakeholderType: z.enum([
     STAKEHOLDER_TYPES.RESIDENT,
@@ -75,6 +49,10 @@ export const feedbackSchema = z.object({
 
 /**
  * Schema Definitions
+ */
+/**
+ * Zod schema for base policy fields
+ * Used for create and update validation
  */
 export const baseSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
@@ -103,6 +81,14 @@ export const updateSchema = baseSchema.partial();
 /**
  * Utility for standardized error responses
  */
+/**
+ * Utility for standardized error responses
+ * @param {Response} res - Express response object
+ * @param {number} code - HTTP status code
+ * @param {string} message - Error message
+ * @param {any} [details] - Optional error details
+ * @returns {Response} Express response
+ */
 export const sendError = (
   res: Response,
   code: number,
@@ -110,9 +96,19 @@ export const sendError = (
   details?: any
 ) => res.status(code).json({ error: message, details });
 
+/**
+ * Extract userId from Express request
+ * @param {Request} req - Express request
+ * @returns {string|undefined} userId if present
+ */
 export const extractUserId = (req: Request): string | undefined =>
   (req as any).user?.id || (req as any).user?._id || undefined;
 
+/**
+ * Build ServiceOptions object from userId
+ * @param {string|undefined} userId
+ * @returns {ServiceOptions} options object
+ */
 export const buildServiceOptions = (
   userId: string | undefined
 ): ServiceOptions => ({
@@ -122,9 +118,18 @@ export const buildServiceOptions = (
 /**
  * Policy Controller — handles HTTP layer
  */
+/**
+ * PolicyControllerClass
+ * Express controller for policy endpoints: create, get, update, approve, list, audit, versions, flagIssue, requestFeedback, remove, revalidateCompliance
+ */
 export class PolicyControllerClass {
-  /** Create new policy */
-  public create = async (req: Request, res: Response) => {
+  /**
+   * Create new policy
+   * @param {Request} req - Express request
+   * @param {Response} res - Express response
+   * @returns {Promise<Response>} HTTP response with created policy or error
+   */
+  public create = async (req: Request, res: Response): Promise<Response> => {
     try {
       const payload = createSchema.parse(req.body);
       const userId = extractUserId(req);
@@ -143,8 +148,13 @@ export class PolicyControllerClass {
     }
   };
 
-  /** Get a single policy by ID */
-  public get = async (req: Request, res: Response) => {
+  /**
+   * Get a single policy by ID
+   * @param {Request} req - Express request
+   * @param {Response} res - Express response
+   * @returns {Promise<Response>} HTTP response with policy or error
+   */
+  public get = async (req: Request, res: Response): Promise<Response> => {
     try {
       const { id } = req.params;
       if (typeof id !== "string")
@@ -159,8 +169,13 @@ export class PolicyControllerClass {
     }
   };
 
-  /** List versions for a policy */
-  public versions = async (req: Request, res: Response) => {
+  /**
+   * List versions for a policy
+   * @param {Request} req - Express request
+   * @param {Response} res - Express response
+   * @returns {Promise<Response>} HTTP response with versions or error
+   */
+  public versions = async (req: Request, res: Response): Promise<Response> => {
     try {
       const { id } = req.params;
       if (typeof id !== "string")
@@ -175,8 +190,13 @@ export class PolicyControllerClass {
     }
   };
 
-  /** Get audit trail for a policy */
-  public audit = async (req: Request, res: Response) => {
+  /**
+   * Get audit trail for a policy
+   * @param {Request} req - Express request
+   * @param {Response} res - Express response
+   * @returns {Promise<Response>} HTTP response with audit trail or error
+   */
+  public audit = async (req: Request, res: Response): Promise<Response> => {
     try {
       const { id } = req.params;
       if (typeof id !== "string")
@@ -190,8 +210,13 @@ export class PolicyControllerClass {
     }
   };
 
-  /** List all policies (supports filters and search) */
-  public list = async (req: Request, res: Response) => {
+  /**
+   * List all policies (supports filters and search)
+   * @param {Request} req - Express request
+   * @param {Response} res - Express response
+   * @returns {Promise<Response>} HTTP response with policies or error
+   */
+  public list = async (req: Request, res: Response): Promise<Response> => {
     try {
       const { q, category, ministry, status, complianceStatus } = req.query;
       const query: any = {};
@@ -210,8 +235,13 @@ export class PolicyControllerClass {
     }
   };
 
-  /** Update a policy by ID */
-  public update = async (req: Request, res: Response) => {
+  /**
+   * Update a policy by ID
+   * @param {Request} req - Express request
+   * @param {Response} res - Express response
+   * @returns {Promise<Response>} HTTP response with updated policy or error
+   */
+  public update = async (req: Request, res: Response): Promise<Response> => {
     try {
       const payload = updateSchema.parse(req.body);
       const { id } = req.params;
@@ -238,8 +268,13 @@ export class PolicyControllerClass {
     }
   };
 
-  /** Approve a policy */
-  public approve = async (req: Request, res: Response) => {
+  /**
+   * Approve a policy
+   * @param {Request} req - Express request
+   * @param {Response} res - Express response
+   * @returns {Promise<Response>} HTTP response with approved policy or error
+   */
+  public approve = async (req: Request, res: Response): Promise<Response> => {
     try {
       const { id } = req.params;
       if (typeof id !== "string")
@@ -260,8 +295,13 @@ export class PolicyControllerClass {
     }
   };
 
-  /** Flag an issue on a policy */
-  public flagIssue = async (req: Request, res: Response) => {
+  /**
+   * Flag an issue on a policy
+   * @param {Request} req - Express request
+   * @param {Response} res - Express response
+   * @returns {Promise<Response>} HTTP response with updated policy or error
+   */
+  public flagIssue = async (req: Request, res: Response): Promise<Response> => {
     try {
       const { id } = req.params;
       const { issue } = z
@@ -287,8 +327,13 @@ export class PolicyControllerClass {
     }
   };
 
-  /** Request stakeholder feedback for a policy */
-  public requestFeedback = async (req: Request, res: Response) => {
+  /**
+   * Request stakeholder feedback for a policy
+   * @param {Request} req - Express request
+   * @param {Response} res - Express response
+   * @returns {Promise<Response>} HTTP response with feedback request result or error
+   */
+  public requestFeedback = async (req: Request, res: Response): Promise<Response> => {
     try {
       const { id } = req.params;
       const { stakeholderGroups, message } = req.body as FeedbackRequest;
@@ -309,8 +354,13 @@ export class PolicyControllerClass {
     }
   };
 
-  /** Delete a policy by ID */
-  public remove = async (req: Request, res: Response) => {
+  /**
+   * Delete a policy by ID
+   * @param {Request} req - Express request
+   * @param {Response} res - Express response
+   * @returns {Promise<Response>} HTTP response with deletion result or error
+   */
+  public remove = async (req: Request, res: Response): Promise<Response> => {
     try {
       const { id } = req.params;
       if (typeof id !== "string")
@@ -325,8 +375,13 @@ export class PolicyControllerClass {
     }
   };
 
-  /** Revalidate compliance for a policy */
-  public revalidateCompliance = async (req: Request, res: Response) => {
+  /**
+   * Revalidate compliance for a policy
+   * @param {Request} req - Express request
+   * @param {Response} res - Express response
+   * @returns {Promise<Response>} HTTP response with compliance result or error
+   */
+  public revalidateCompliance = async (req: Request, res: Response): Promise<Response> => {
     try {
       const { id } = req.params;
       if (typeof id !== "string")
@@ -356,6 +411,12 @@ export const PolicyController = new PolicyControllerClass();
 
 /**
  * Async handler (optional for cleaner routes)
+ */
+/**
+ * Async handler for Express routes
+ * Wraps async functions and forwards errors to next()
+ * @param {Function} fn - Async route handler
+ * @returns {Function} Express middleware
  */
 export const asyncHandler =
   (fn: any) => (req: Request, res: Response, next: NextFunction) =>
