@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Download, FileText } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Download, FileText, ChevronDown } from "lucide-react";
 import { Button } from "./ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import {
@@ -11,8 +11,18 @@ import {
   TableRow,
 } from "./ui/table";
 import { InvoiceStatusBadge } from "./InvoiceStatusBadge";
-import { mockInvoices } from "../data/mockInvoices";
 import type { Invoice, InvoiceStatus } from "../types/payment";
+import { useQuery } from "@tanstack/react-query";
+import {
+  apiGetMyInvoices,
+  type GetMyInvoicesParams,
+} from "../../../api/payment/invoice.api";
+import { PageSkeleton } from "../../../components/LoadingSkeleton";
+import {
+  exportInvoicesCsv,
+  exportInvoicesPdf,
+} from "../services/exportInvoices";
+import PartialPaymentDialog from "./PartialPaymentDialog";
 
 interface BillingDashboardProps {
   onPayNow: (invoice: Invoice) => void;
@@ -24,28 +34,71 @@ export function BillingDashboard({
   onViewInvoice,
 }: BillingDashboardProps) {
   const [activeTab, setActiveTab] = useState<string>("all");
+  const [partialOpen, setPartialOpen] = useState(false);
+  const [partialInvoice, setPartialInvoice] = useState<Invoice | null>(null);
 
-  const filterInvoices = (status?: InvoiceStatus) => {
-    if (!status) return mockInvoices;
-    return mockInvoices.filter((inv) => inv.status === status);
-  };
+  // Fetch invoices from backend for logged-in resident
+  type BackendStatus = GetMyInvoicesParams["status"];
 
-  const getFilteredInvoices = () => {
-    switch (activeTab) {
-      case "pending":
-        return filterInvoices("pending").concat(
-          mockInvoices.filter((i) => i.status === "overdue")
-        );
-      case "partially_paid":
-        return filterInvoices("partially_paid");
-      case "paid":
-        return filterInvoices("paid");
-      case "refunded":
-        return filterInvoices("refunded");
-      default:
-        return mockInvoices;
-    }
-  };
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["invoices", "me", { tab: activeTab }],
+    queryFn: async () => {
+      // Backend statuses are Title Case; map from UI tab values
+      const statusMap: Record<string, BackendStatus | undefined> = {
+        all: undefined,
+        pending: "Pending",
+        partially_paid: "Partially Paid",
+        paid: "Paid",
+        refunded: "Refunded",
+      };
+      const status: BackendStatus | undefined = statusMap[activeTab];
+      return apiGetMyInvoices(status ? { status } : undefined);
+    },
+    // Refetch when tab changes; cache handled globally in QueryClient
+  });
+
+  // Map backend DTOs to UI Invoice type
+  const invoices: Invoice[] = useMemo(() => {
+    const raw = data ?? [];
+    const toUiStatus = (s: string): InvoiceStatus => {
+      switch (s) {
+        case "Pending":
+          return "pending";
+        case "Paid":
+          return "paid";
+        case "Refunded":
+          return "refunded";
+        case "Partially Paid":
+          return "partially_paid";
+        default:
+          return "pending"; // fallback
+      }
+    };
+    const toUiReason = (r: string): Invoice["reason"] => {
+      const normalized = (r || "").toLowerCase();
+      if (normalized.includes("overweight")) return "Overweight Bin";
+      if (normalized.includes("special")) return "Special Collection";
+      if (normalized.includes("subscription")) return "Subscription Renewal";
+      if (normalized.includes("late")) return "Late Fee";
+      // default mapping
+      return "Overweight Bin";
+    };
+    return raw.map((inv) => ({
+      id: inv.id,
+      invoiceNumber: inv.id, // no separate number from backend yet
+      dateIssued: inv.createdAt,
+      dueDate: inv.dueDate ?? inv.createdAt,
+      amount: inv.amount,
+      paidToDate: (inv as any).paidToDate ?? undefined,
+      outstanding: (inv as any).outstanding ?? undefined,
+      reason: toUiReason(inv.reason),
+      originatingUseCase: "Payments",
+      status: toUiStatus(inv.status),
+      // lateFee/discount are not provided by backend Phase 2
+    }));
+  }, [data]);
+
+  // no-op
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-LK", {
@@ -62,7 +115,19 @@ export function BillingDashboard({
     });
   };
 
-  const invoices = getFilteredInvoices();
+  if (isLoading) {
+    return <PageSkeleton />;
+  }
+
+  if (isError) {
+    return (
+      <div className="p-8">
+        <div className="bg-red-50 border border-red-200 text-red-800 p-4 rounded">
+          Failed to load invoices. Please try again.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8">
@@ -85,9 +150,11 @@ export function BillingDashboard({
             style={{ fontSize: "24px", fontWeight: "600" }}
           >
             {formatCurrency(
-              mockInvoices
-                .filter((i) => i.status === "pending" || i.status === "overdue")
-                .reduce((sum, i) => sum + i.amount + (i.lateFee || 0), 0)
+              invoices
+                .filter(
+                  (i) => i.status === "pending" || i.status === "partially_paid"
+                )
+                .reduce((sum, i) => sum + (i.outstanding ?? i.amount), 0)
             )}
           </p>
         </div>
@@ -101,9 +168,7 @@ export function BillingDashboard({
             style={{ fontSize: "24px", fontWeight: "600" }}
           >
             {formatCurrency(
-              mockInvoices
-                .filter((i) => i.status === "overdue")
-                .reduce((sum, i) => sum + i.amount + (i.lateFee || 0), 0)
+              0 // overdue not provided by backend yet
             )}
           </p>
         </div>
@@ -117,7 +182,7 @@ export function BillingDashboard({
             style={{ fontSize: "24px", fontWeight: "600" }}
           >
             {formatCurrency(
-              mockInvoices
+              invoices
                 .filter((i) => i.status === "paid")
                 .slice(0, 3)
                 .reduce((sum, i) => sum + i.amount, 0)
@@ -133,7 +198,7 @@ export function BillingDashboard({
             className="text-gray-900"
             style={{ fontSize: "24px", fontWeight: "600" }}
           >
-            {mockInvoices.length}
+            {invoices.length}
           </p>
         </div>
       </div>
@@ -156,11 +221,19 @@ export function BillingDashboard({
               </TabsList>
 
               <div className="flex gap-2">
-                <Button variant="outline" size="sm">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => exportInvoicesPdf(invoices)}
+                >
                   <Download className="w-4 h-4 mr-2" />
                   Export PDF
                 </Button>
-                <Button variant="outline" size="sm">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => exportInvoicesCsv(invoices)}
+                >
                   <Download className="w-4 h-4 mr-2" />
                   Export CSV
                 </Button>
@@ -202,31 +275,51 @@ export function BillingDashboard({
                         {invoice.reason}
                       </TableCell>
                       <TableCell className="text-gray-900">
-                        {formatCurrency(
-                          invoice.amount + (invoice.lateFee || 0)
-                        )}
-                        {invoice.lateFee && (
-                          <span
-                            className="text-red-600 ml-1"
-                            style={{ fontSize: "12px" }}
-                          >
-                            (+{formatCurrency(invoice.lateFee)} late fee)
-                          </span>
-                        )}
+                        {formatCurrency(invoice.amount)}
                       </TableCell>
                       <TableCell>
                         <InvoiceStatusBadge status={invoice.status} />
                       </TableCell>
                       <TableCell className="text-right">
-                        {(invoice.status === "pending" ||
-                          invoice.status === "overdue") && (
+                        {/* Partially paid → single button to pay remaining */}
+                        {invoice.status === "partially_paid" && (
                           <Button
                             size="sm"
                             onClick={() => onPayNow(invoice)}
                             className="bg-green-700 hover:bg-green-800 text-white"
                           >
-                            Pay Now
+                            {invoice.outstanding
+                              ? `Pay Remaining (${formatCurrency(
+                                  invoice.outstanding
+                                )})`
+                              : "Pay Now"}
                           </Button>
+                        )}
+
+                        {/* Pending → split button with dropdown (Pay Now | Pay Partial) */}
+                        {invoice.status === "pending" && (
+                          <div className="inline-flex items-stretch border border-gray-300 rounded-md overflow-hidden">
+                            <Button
+                              size="sm"
+                              onClick={() => onPayNow(invoice)}
+                              className="bg-green-700 hover:bg-green-800 text-white rounded-none"
+                            >
+                              Pay Now
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="rounded-none border-0 border-l"
+                              onClick={() => {
+                                setPartialInvoice(invoice);
+                                setPartialOpen(true);
+                              }}
+                              aria-label="Pay Partial"
+                              title="Pay Partial"
+                            >
+                              <ChevronDown className="w-4 h-4" />
+                            </Button>
+                          </div>
                         )}
                         {invoice.status === "paid" && (
                           <Button
@@ -246,6 +339,16 @@ export function BillingDashboard({
           </Tabs>
         </div>
       </div>
+      <PartialPaymentDialog
+        open={partialOpen}
+        onOpenChange={setPartialOpen}
+        invoice={partialInvoice}
+        onSubmit={(amt) => {
+          if (!partialInvoice) return;
+          const patched: Invoice = { ...partialInvoice, outstanding: amt };
+          onPayNow(patched);
+        }}
+      />
     </div>
   );
 }

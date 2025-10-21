@@ -1,0 +1,92 @@
+import { Request, Response } from "express";
+import { PaymentService } from "../services/payment.service";
+import { InvoiceService } from "../services/invoice.service";
+import { validateRequest } from "../../../middleware/validateRequest";
+import { ProcessPaymentSchema } from "../types/pay.dto";
+
+const paymentService = new PaymentService();
+const invoiceService = new InvoiceService();
+
+export const getInvoices = async (req: Request, res: Response) => {
+  try {
+    const userId = req.params.userId as string | undefined;
+    if (!userId) return res.status(400).json({ message: "userId is required" });
+    const invoices = await paymentService.getInvoices(userId);
+    res.status(200).json(invoices);
+  } catch (err: any) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+export const processPayment = async (req: Request, res: Response) => {
+  try {
+    const dto = (req as any).validatedBody || req.body;
+    const payerId = (req as any).user?.id as string | undefined;
+    if (!payerId) return res.status(401).json({ message: "Unauthorized" });
+    const idempotencyKey =
+      (req.header("Idempotency-Key") as string | undefined) ||
+      dto.idempotencyKey;
+    const result = await paymentService.processPayment({
+      payerId,
+      invoiceId: dto.invoiceId,
+      method: dto.method,
+      amount: dto.amount,
+      paymentDetails: dto.paymentDetails,
+      idempotencyKey,
+    });
+    res.status(200).json(result);
+  } catch (err: any) {
+    res.status(err.statusCode || 400).json({ message: err.message });
+  }
+};
+
+export const calculateOverweight = async (req: Request, res: Response) => {
+  try {
+    const { actualWeight, allowedWeight } = req.body as {
+      actualWeight: number;
+      allowedWeight: number;
+    };
+    const result = await invoiceService.calculateOverweight(
+      actualWeight,
+      allowedWeight
+    );
+    res.status(200).json(result);
+  } catch (err: any) {
+    res.status(400).json({ message: err.message });
+  }
+};
+
+export const applyDiscount = async (req: Request, res: Response) => {
+  try {
+    const { amount, discountPercent } = req.body as {
+      amount: number;
+      discountPercent: number;
+    };
+    const result = await invoiceService.applyDiscount(amount, discountPercent);
+    res.status(200).json(result);
+  } catch (err: any) {
+    res.status(400).json({ message: err.message });
+  }
+};
+
+export const generateInvoice = async (req: Request, res: Response) => {
+  try {
+    const actorId = (req as any).user?.id || "system";
+    const invoice = await invoiceService.createInvoice({
+      ...(req.body || {}),
+      actorId,
+    });
+    res.status(201).json(invoice);
+  } catch (err: any) {
+    res.status(400).json({ message: err.message });
+  }
+};
+
+// stub for refund/report to be implemented later
+export const refund = async (_req: Request, res: Response) => {
+  res.status(501).json({ message: "Refund endpoint not implemented yet" });
+};
+
+export const adminReports = async (_req: Request, res: Response) => {
+  res.status(501).json({ message: "Reports endpoint not implemented yet" });
+};
