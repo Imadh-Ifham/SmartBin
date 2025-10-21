@@ -2,9 +2,9 @@ import request from "supertest";
 import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
 import { MongoMemoryServer } from "mongodb-memory-server";
-import app from "../../../app";
-import { UserModel } from "../../auth/models/user.model";
-import { InvoiceModel } from "../models/invoice.model";
+import app from "../../../../app";
+import { UserModel } from "../../../auth/models/user.model";
+import { InvoiceModel } from "../../models/invoice.model";
 
 /**
  * Integration tests for payment invoice routes using in-memory MongoDB.

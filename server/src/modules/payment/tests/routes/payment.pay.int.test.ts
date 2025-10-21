@@ -2,13 +2,13 @@ import request from "supertest";
 import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
 import { MongoMemoryReplSet } from "mongodb-memory-server";
-import app from "../../../app";
-import { UserModel } from "../../auth/models/user.model";
-import { InvoiceModel } from "../models/invoice.model";
-import { PaymentModel } from "../models/payment.model";
+import app from "../../../../app";
+import { UserModel } from "../../../auth/models/user.model";
+import { InvoiceModel } from "../../models/invoice.model";
+import { PaymentModel } from "../../models/payment.model";
 
 // Mock StripeService to avoid real network calls
-jest.mock("../services/stripe.service", () => {
+jest.mock("../../services/stripe.service", () => {
   return {
     StripeService: class {
       async createPaymentIntent(amount: number) {

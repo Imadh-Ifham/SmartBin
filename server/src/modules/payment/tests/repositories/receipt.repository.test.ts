@@ -1,6 +1,6 @@
 import mongoose, { Types } from "mongoose";
 import { MongoMemoryReplSet } from "mongodb-memory-server";
-import { ReceiptRepository } from "../repositories/receipt.repository";
+import { ReceiptRepository } from "../../repositories/receipt.repository";
 
 describe("ReceiptRepository", () => {
   const repo = new ReceiptRepository();
