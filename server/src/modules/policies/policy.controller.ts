@@ -5,6 +5,11 @@ import type { PolicyCreateDTO, PolicyUpdateDTO } from "./policy.service";
 import { STAKEHOLDER_TYPES } from "./constants";
 import { FeedbackRequest, IssueRequest, ServiceOptions } from "./types";
 
+/**
+ * Standardized error messages used across controller responses. Keeping these in a
+ * single object makes it easier to maintain consistent API error replies and helps
+ * during the viva to explain error handling conventions.
+ */
 const ERROR_MESSAGES = {
   VALIDATION_FAILED: "Validation failed",
   SERVER_ERROR: "Server error",
@@ -15,6 +20,7 @@ const ERROR_MESSAGES = {
 /**
  * Zod schema for feedback date
  * Accepts string or Date, transforms to Date, validates format
+ * Uses Zod transform context to report issues for invalid values.
  */
 export const feedbackDateSchema = z
   .union([z.string(), z.date()])
@@ -22,11 +28,15 @@ export const feedbackDateSchema = z
     if (value instanceof Date) return value;
     const normalized = String(value ?? "").trim();
     if (!normalized) {
+      // Zod expects a specific issue shape; cast to any to satisfy TS
       (ctx as any).addIssue?.({ code: z.ZodIssueCode.custom as any, message: "Invalid date" });
       return z.NEVER;
     }
     const parsed = new Date(normalized);
     if (Number.isNaN(parsed.getTime())) {
+      // If date parsing fails we add a Zod custom issue so the controller can
+      // return a 400/validation error with useful details. This demonstrates
+      // input validation at the controller boundary (Validation responsibility).
       (ctx as any).addIssue?.({ code: z.ZodIssueCode.custom as any, message: "Invalid date" });
       return z.NEVER;
     }
@@ -43,7 +53,9 @@ export const feedbackSchema = z.object({
     STAKEHOLDER_TYPES.BUSINESS,
     STAKEHOLDER_TYPES.STAFF,
   ]),
+  // `message` is optional but if present it must contain text (min length 1)
   message: z.string().trim().min(1, "Feedback message is required").optional(),
+  // `date` accepts string or Date via feedbackDateSchema which normalizes/validates
   date: feedbackDateSchema.optional(),
 });
 
@@ -131,6 +143,9 @@ export class PolicyControllerClass {
    */
   public create = async (req: Request, res: Response): Promise<Response> => {
     try {
+      // Validate incoming payload at the controller boundary. Using Zod keeps
+      // validation declarative and consistent; controller only proceeds when
+      // parsed payload conforms to DTO shape.
       const payload = createSchema.parse(req.body);
       const userId = extractUserId(req);
       const options = buildServiceOptions(userId);
@@ -181,6 +196,9 @@ export class PolicyControllerClass {
       if (typeof id !== "string")
         return sendError(res, 400, ERROR_MESSAGES.INVALID_ID);
 
+      // Controller calls the service (business logic). The service returns
+      // version documents (PolicyVersion); controller wraps them in a simple
+      // response shape with a count for convenience.
       const versions = await (PolicyService as any).versions?.(id);
       if (!versions)
         return sendError(res, 404, ERROR_MESSAGES.POLICY_NOT_FOUND);
@@ -202,6 +220,9 @@ export class PolicyControllerClass {
       if (typeof id !== "string")
         return sendError(res, 400, ERROR_MESSAGES.INVALID_ID);
 
+      // Audit trail is a small array of entries stored on the policy document.
+      // Controller returns the array and a count; audit entries include action,
+      // date and optional user who performed the action.
       const audit = await (PolicyService as any).audit?.(id);
       if (!audit) return sendError(res, 404, ERROR_MESSAGES.POLICY_NOT_FOUND);
       return res.json({ count: audit.length, audit });
@@ -228,6 +249,10 @@ export class PolicyControllerClass {
       if (typeof complianceStatus === "string")
         query.complianceStatus = complianceStatus;
 
+      // List delegates searching and enrichment to the service. Enrichment will
+      // attach performanceReport, violations, feedbackSummary and complianceStatus
+      // for each returned policy. This keeps the controller thin and focused on
+      // HTTP concerns only.
       const policies = await PolicyService.list(query);
       return res.json({ count: policies.length, policies });
     } catch {
@@ -243,6 +268,8 @@ export class PolicyControllerClass {
    */
   public update = async (req: Request, res: Response): Promise<Response> => {
     try {
+      // Validate update payload; updateSchema is partial so callers can send
+      // only fields they wish to change.
       const payload = updateSchema.parse(req.body);
       const { id } = req.params;
       if (typeof id !== "string")
