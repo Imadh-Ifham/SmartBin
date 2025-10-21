@@ -3,6 +3,7 @@ export interface QR {
   code: string;
   qrUrl: string;
   userId: string;
+  ownerName?: string;
   address: string;
   province: string;
   city: string;

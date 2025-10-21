@@ -1,9 +1,22 @@
 import React, { useState } from "react";
+import { useAppDispatch } from "../../../app/hooks";
+import {
+  fetchBinTypes,
+  fetchQRWithBins,
+} from "../../smart-bin/slices/binThunk";
 
 const ManualScanner: React.FC = () => {
   const [value, setValue] = useState("");
 
-  const handleSubmit = () => {};
+  const dispatch = useAppDispatch();
+
+  const handleSubmit = () => {
+    const fetchData = async () => {
+      await dispatch(fetchQRWithBins(value));
+      await dispatch(fetchBinTypes());
+    };
+    fetchData();
+  };
 
   return (
     <div className="mt-4">
@@ -19,7 +32,7 @@ const ManualScanner: React.FC = () => {
         />
         <button
           className="bg-blue-600 text-white px-4 py-2 rounded-md"
-          onClick={handleSubmit}
+          onClick={() => handleSubmit()}
         >
           Scan
         </button>
