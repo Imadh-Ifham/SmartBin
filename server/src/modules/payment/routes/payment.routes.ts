@@ -1,22 +1,18 @@
-import { Router } from "express";
-import {
-  getInvoices,
-  processPayment,
-  calculateOverweight,
-  applyDiscount,
-  generateInvoice,
-  refund,
-  adminReports,
-} from "../controllers/payment.Controller";
+import express, { Router } from "express";
+import { processPayment } from "../controllers/payment.Controller";
+import { getReceipt } from "../controllers/receipt.controller";
+import { authenticate } from "../../../middleware/authenticate";
+import { validateRequest } from "../../../middleware/validateRequest";
+import { ProcessPaymentSchema } from "../types/pay.dto";
 
 const router = Router();
 
-router.get("/:userId/invoices", getInvoices);
-router.post("/pay", processPayment);
-router.post("/calculateOverweight", calculateOverweight);
-router.post("/applyDiscount", applyDiscount);
-router.post("/generateInvoice", generateInvoice);
-router.post("/refund", refund);
-router.get("/admin/reports", adminReports);
+router.post(
+  "/pay",
+  authenticate,
+  validateRequest({ body: ProcessPaymentSchema }),
+  processPayment
+);
+router.get("/receipts/:id", authenticate, getReceipt);
 
 export default router;

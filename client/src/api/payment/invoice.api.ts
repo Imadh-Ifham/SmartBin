@@ -8,6 +8,8 @@ export interface BackendInvoiceDto {
   status: string; // "Pending" | "Paid" | "Partially Paid" | "Refunded"
   createdAt: string;
   dueDate?: string | null;
+  paidToDate?: number;
+  outstanding?: number;
 }
 
 export interface GetMyInvoicesParams {

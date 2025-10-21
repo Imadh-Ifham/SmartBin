@@ -25,8 +25,27 @@ export class InvoiceRepository {
     return await InvoiceModel.findById(id).exec();
   }
 
-  async updateStatus(id: string, status: InvoiceStatus) {
-    return await InvoiceModel.findByIdAndUpdate(id, { status }, { new: true });
+  async updateStatus(
+    id: string,
+    status: InvoiceStatus,
+    opts?: { session?: any }
+  ) {
+    return await InvoiceModel.findByIdAndUpdate(
+      id,
+      { status },
+      { new: true, session: opts?.session }
+    );
+  }
+
+  async updateTotals(
+    id: string,
+    patch: Partial<Pick<IInvoice, "paidToDate" | "outstanding" | "status">>,
+    opts?: { session?: any }
+  ) {
+    return await InvoiceModel.findByIdAndUpdate(id, patch, {
+      new: true,
+      session: opts?.session,
+    }).exec();
   }
 
   async findRecentPendingByUserAndReason(

@@ -6,6 +6,8 @@ import { Provider } from "react-redux";
 import { store } from "./app/store.ts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { initializeInterceptors } from "./config/apiInterceptor";
+import { Elements } from "@stripe/react-stripe-js";
+import { loadStripe } from "@stripe/stripe-js";
 
 // Initialize API interceptors for automatic auth header injection
 initializeInterceptors();
@@ -24,7 +26,13 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <Provider store={store}>
       <QueryClientProvider client={queryClient}>
-        <App />
+        <Elements
+          stripe={loadStripe(
+            import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string
+          )}
+        >
+          <App />
+        </Elements>
       </QueryClientProvider>
     </Provider>
   </StrictMode>
