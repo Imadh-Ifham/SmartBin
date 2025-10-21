@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import { MongoMemoryReplSet } from "mongodb-memory-server";
-import { IdempotencyRepository } from "../repositories/idempotency.repository";
+import { IdempotencyRepository } from "../../repositories/idempotency.repository";
 
 describe("IdempotencyRepository", () => {
   const repo = new IdempotencyRepository();

@@ -1,6 +1,6 @@
 import mongoose, { Types } from "mongoose";
 import { MongoMemoryReplSet } from "mongodb-memory-server";
-import { InvoiceRepository } from "../repositories/invoice.repository";
+import { InvoiceRepository } from "../../repositories/invoice.repository";
 
 describe("InvoiceRepository", () => {
   const repo = new InvoiceRepository();
@@ -120,5 +120,43 @@ describe("InvoiceRepository", () => {
     const onlyPaid = await repo.findAllByUser(uid, "Paid");
     expect(onlyPaid.length).toBe(1);
     expect(onlyPaid[0]?.status).toBe("Paid");
+  });
+
+  // Consolidated from invoice.repository.more.test.ts
+  it("findPendingByUser returns only Pending", async () => {
+    const uid = new Types.ObjectId();
+    await repo.create({
+      userId: uid,
+      amount: 100,
+      reason: "A",
+      status: "Pending",
+    } as any);
+    await repo.create({
+      userId: uid,
+      amount: 200,
+      reason: "B",
+      status: "Paid",
+    } as any);
+    const list = await repo.findPendingByUser(uid.toString());
+    expect(list).toHaveLength(1);
+    expect(list[0]!.status).toBe("Pending");
+  });
+
+  it("updateTotals updates paidToDate, outstanding and status", async () => {
+    const uid = new Types.ObjectId();
+    const inv = await repo.create({
+      userId: uid,
+      amount: 1000,
+      reason: "C",
+      status: "Pending",
+    } as any);
+    const updated = await repo.updateTotals(inv._id.toString(), {
+      paidToDate: 400,
+      outstanding: 600,
+      status: "Partially Paid",
+    });
+    expect(updated?.paidToDate).toBe(400);
+    expect(updated?.outstanding).toBe(600);
+    expect(updated?.status).toBe("Partially Paid");
   });
 });

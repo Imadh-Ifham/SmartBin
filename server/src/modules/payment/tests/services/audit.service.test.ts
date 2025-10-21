@@ -1,4 +1,4 @@
-import { AuditService } from "../services/audit.service";
+import { AuditService } from "../../services/audit.service";
 
 describe("AuditService", () => {
   it("log writes to console.info with payload", async () => {

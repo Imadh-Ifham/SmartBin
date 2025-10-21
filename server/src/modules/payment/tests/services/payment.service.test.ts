@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { PaymentService } from "../services/payment.service";
+import { PaymentService } from "../../services/payment.service";
 
 describe("PaymentService (unit)", () => {
   const mkSession = () => {
@@ -35,7 +35,7 @@ describe("PaymentService (unit)", () => {
     // Patch internals
     const invoiceRepo = {
       findById: jest.fn().mockResolvedValue(baseInvoice()),
-      updateStatus: jest.fn().mockResolvedValue(undefined),
+      updateTotals: jest.fn().mockResolvedValue(undefined),
       findPendingByUser: jest.fn(),
     };
     const paymentRepo = {
@@ -104,9 +104,11 @@ describe("PaymentService (unit)", () => {
       }),
       { session }
     );
-    expect(invoiceRepo.updateStatus).toHaveBeenCalledWith("inv_1", "Paid", {
-      session,
-    });
+    expect(invoiceRepo.updateTotals).toHaveBeenCalledWith(
+      "inv_1",
+      { paidToDate: 1500, outstanding: 0, status: "Paid" },
+      { session }
+    );
     expect(session.commitTransaction).toHaveBeenCalled();
     expect((res as any).clientSecret).toBe("sec_1");
     expect(idemRepo.complete).toHaveBeenCalledWith(
@@ -261,15 +263,23 @@ describe("PaymentService (unit)", () => {
     expect((svc as any).idempotencyRepo.fail).toHaveBeenCalled();
   });
 
-  it("handleGatewaySucceeded updates status and invoice when needed", async () => {
+  it("handleGatewaySucceeded updates payment and invoice totals when needed", async () => {
     const svc = mkService();
-    const payment = { _id: "pay_1", status: "Processing", invoiceId: "inv_1" };
+    const payment = {
+      _id: "pay_1",
+      status: "Processing",
+      invoiceId: "inv_1",
+    } as any;
     const paymentRepo = {
       findByTransactionId: jest.fn().mockResolvedValue(payment),
       updateStatus: jest.fn().mockResolvedValue(undefined),
+      findByInvoice: jest
+        .fn()
+        .mockResolvedValue([{ status: "Success", amount: 1500 }]),
     };
     const invoiceRepo = {
-      updateStatus: jest.fn().mockResolvedValue(undefined),
+      findById: jest.fn().mockResolvedValue({ _id: "inv_1", amount: 1500 }),
+      updateTotals: jest.fn().mockResolvedValue(undefined),
     };
 
     (svc as any).paymentRepo = paymentRepo;
@@ -278,7 +288,11 @@ describe("PaymentService (unit)", () => {
     const res = await svc.handleGatewaySucceeded("pi_1");
     expect(res).toBe(payment);
     expect(paymentRepo.updateStatus).toHaveBeenCalledWith("pay_1", "Success");
-    expect(invoiceRepo.updateStatus).toHaveBeenCalledWith("inv_1", "Paid");
+    expect(invoiceRepo.updateTotals).toHaveBeenCalledWith("inv_1", {
+      paidToDate: 1500,
+      outstanding: 0,
+      status: "Paid",
+    });
   });
 
   it("handleGatewaySucceeded returns null if payment not found", async () => {
@@ -311,7 +325,7 @@ describe("PaymentService (unit)", () => {
     const svc = mkService();
     (svc as any).invoiceRepo = {
       findById: jest.fn().mockResolvedValue(baseInvoice()),
-      updateStatus: jest.fn(),
+      updateTotals: jest.fn(),
     };
     (svc as any).paymentRepo = {
       findByInvoice: jest.fn().mockResolvedValue([]),
@@ -341,9 +355,9 @@ describe("PaymentService (unit)", () => {
       amount: 500,
     });
     expect(res.payment.gateway).toBe("mock");
-    expect((svc as any).invoiceRepo.updateStatus).toHaveBeenCalledWith(
+    expect((svc as any).invoiceRepo.updateTotals).toHaveBeenCalledWith(
       "inv_1",
-      "Partially Paid",
+      { paidToDate: 500, outstanding: 1000, status: "Partially Paid" },
       { session }
     );
   });
@@ -353,7 +367,7 @@ describe("PaymentService (unit)", () => {
     const svc = mkService();
     (svc as any).invoiceRepo = {
       findById: jest.fn().mockResolvedValue(baseInvoice({ amount: 1000 })),
-      updateStatus: jest.fn(),
+      updateTotals: jest.fn(),
     };
     (svc as any).paymentRepo = {
       findByInvoice: jest
@@ -380,7 +394,7 @@ describe("PaymentService (unit)", () => {
       }),
     };
     (svc as any).receiptSvc = { generate: jest.fn().mockResolvedValue({}) };
-    (svc as any).invoiceRepo.updateStatus = jest.fn();
+    (svc as any).invoiceRepo.updateTotals = jest.fn();
 
     const res = await svc.processPayment({
       payerId: "user_1",
@@ -396,7 +410,7 @@ describe("PaymentService (unit)", () => {
     const svc = mkService();
     (svc as any).invoiceRepo = {
       findById: jest.fn().mockResolvedValue(baseInvoice()),
-      updateStatus: jest.fn(),
+      updateTotals: jest.fn(),
     };
     (svc as any).paymentRepo = {
       findByInvoice: jest.fn().mockResolvedValue([]),
@@ -445,7 +459,7 @@ describe("PaymentService (unit)", () => {
     const svc = mkService();
     (svc as any).invoiceRepo = {
       findById: jest.fn().mockResolvedValue(baseInvoice()),
-      updateStatus: jest.fn(),
+      updateTotals: jest.fn(),
     };
     (svc as any).paymentRepo = {
       findByInvoice: jest.fn().mockResolvedValue([]),
@@ -479,5 +493,293 @@ describe("PaymentService (unit)", () => {
       "idem",
       expect.any(Object)
     );
+  });
+});
+
+// Consolidated from payment.service.totals.test.ts
+describe("PaymentService totals updates", () => {
+  const mkSession = () => {
+    const session = {
+      startTransaction: jest.fn(),
+      commitTransaction: jest.fn(),
+      abortTransaction: jest.fn(),
+      endSession: jest.fn(),
+    } as any;
+    jest.spyOn(mongoose, "startSession").mockResolvedValue(session);
+    return session;
+  };
+
+  beforeEach(() => {
+    jest.resetAllMocks();
+  });
+
+  it("processPayment success updates totals (paidToDate/outstanding/status)", async () => {
+    const session = mkSession();
+    const svc = new PaymentService();
+    const invoiceRepo = {
+      findById: jest.fn().mockResolvedValue({
+        _id: "inv1",
+        userId: { toString: () => "u1" },
+        amount: 1000,
+        status: "Pending",
+        paidToDate: 200,
+      }),
+      updateTotals: jest.fn(),
+      findPendingByUser: jest.fn(),
+    };
+    const paymentRepo = {
+      findByInvoice: jest
+        .fn()
+        .mockResolvedValue([{ status: "Success", amount: 200 }]),
+      create: jest.fn().mockResolvedValue({
+        _id: "p1",
+        amount: 300,
+        gateway: "stripe",
+        transactionId: "pi_1",
+      }),
+    };
+    (svc as any).invoiceRepo = invoiceRepo;
+    (svc as any).paymentRepo = paymentRepo;
+    (svc as any).idempotencyRepo = {
+      find: jest.fn(),
+      createProcessing: jest.fn(),
+      complete: jest.fn(),
+      fail: jest.fn(),
+    };
+    (svc as any).stripe = {
+      createPaymentIntent: jest.fn().mockResolvedValue({
+        id: "pi_1",
+        status: "succeeded",
+        clientSecret: "sec",
+      }),
+    };
+    (svc as any).receiptSvc = { generate: jest.fn().mockResolvedValue({}) };
+    (svc as any).notifier = { notifyPaymentSuccess: jest.fn() };
+
+    await svc.processPayment({
+      payerId: "u1",
+      invoiceId: "inv1",
+      method: "Card",
+      amount: 300,
+    });
+    // newPaid = min(1000, 200 + 300) = 500, outstanding = 500, status = Partially Paid
+    expect(invoiceRepo.updateTotals).toHaveBeenCalledWith(
+      "inv1",
+      { paidToDate: 500, outstanding: 500, status: "Partially Paid" },
+      { session }
+    );
+  });
+
+  it("handleGatewaySucceeded recomputes totals and updates invoice", async () => {
+    const svc = new PaymentService();
+    const payment = {
+      _id: "pay_1",
+      status: "Processing",
+      invoiceId: { toString: () => "inv_1" },
+    } as any;
+    const paymentRepo = {
+      findByTransactionId: jest.fn().mockResolvedValue(payment),
+      updateStatus: jest.fn().mockResolvedValue(undefined),
+      findByInvoice: jest.fn().mockResolvedValue([
+        { status: "Success", amount: 400 },
+        { status: "Processing", amount: 100 },
+      ]),
+    };
+    const invoiceRepo = {
+      findById: jest.fn().mockResolvedValue({ _id: "inv_1", amount: 700 }),
+      updateTotals: jest.fn().mockResolvedValue(undefined),
+    };
+    (svc as any).paymentRepo = paymentRepo;
+    (svc as any).invoiceRepo = invoiceRepo;
+
+    await svc.handleGatewaySucceeded("tx_1");
+    // totalPaid = 400 => outstanding = 300 => Partially Paid
+    expect(invoiceRepo.updateTotals).toHaveBeenCalledWith("inv_1", {
+      paidToDate: 400,
+      outstanding: 300,
+      status: "Partially Paid",
+    });
+    expect(paymentRepo.updateStatus).toHaveBeenCalledWith("pay_1", "Success");
+  });
+});
+
+// Consolidated from payment.service.branches.test.ts
+describe("PaymentService branch coverage", () => {
+  const mkSession = () => {
+    const session = {
+      startTransaction: jest.fn(),
+      commitTransaction: jest.fn(),
+      abortTransaction: jest.fn(),
+      endSession: jest.fn(),
+    } as any;
+    jest.spyOn(mongoose, "startSession").mockResolvedValue(session);
+    return session;
+  };
+
+  beforeEach(() => {
+    jest.resetAllMocks();
+    process.env.PAYMENT_CURRENCY = "lkr";
+  });
+
+  it("retries on transient lock and succeeds on third attempt", async () => {
+    const session = mkSession();
+    const svc = new PaymentService();
+    let attempt = 0;
+
+    (svc as any).invoiceRepo = {
+      findById: jest.fn().mockResolvedValue({
+        _id: "inv1",
+        userId: { toString: () => "u1" },
+        amount: 600,
+      }),
+      updateTotals: jest.fn(),
+      findPendingByUser: jest.fn(),
+    };
+    (svc as any).paymentRepo = {
+      findByInvoice: jest.fn().mockResolvedValue([]),
+      create: jest.fn().mockImplementation(async () => {
+        attempt++;
+        if (attempt < 3) throw new Error("Unable to acquire IX lock");
+        return {
+          _id: "p1",
+          amount: 200,
+          gateway: "mock",
+          transactionId: "MOCK-1",
+        };
+      }),
+    };
+    (svc as any).idempotencyRepo = {
+      find: jest.fn(),
+      createProcessing: jest.fn(),
+      complete: jest.fn(),
+      fail: jest.fn(),
+    };
+    (svc as any).stripe = { createPaymentIntent: jest.fn() };
+    (svc as any).receiptSvc = { generate: jest.fn().mockResolvedValue({}) };
+    (svc as any).notifier = { notifyPaymentSuccess: jest.fn() };
+
+    const res = await svc.processPayment({
+      payerId: "u1",
+      invoiceId: "inv1",
+      method: "Bank",
+      amount: 200,
+      idempotencyKey: "idem",
+    });
+    expect(res.payment._id).toBe("p1");
+    expect((svc as any).invoiceRepo.updateTotals).toHaveBeenCalledWith(
+      "inv1",
+      { paidToDate: 200, outstanding: 400, status: "Partially Paid" },
+      { session }
+    );
+    // ensure we retried exactly twice before success
+    expect((svc as any).paymentRepo.create).toHaveBeenCalledTimes(3);
+  });
+
+  it("exhausts retries and marks idempotency failed then throws", async () => {
+    mkSession();
+    const svc = new PaymentService();
+    (svc as any).invoiceRepo = {
+      findById: jest.fn().mockResolvedValue({
+        _id: "inv1",
+        userId: { toString: () => "u1" },
+        amount: 100,
+      }),
+    };
+    (svc as any).paymentRepo = {
+      findByInvoice: jest.fn().mockResolvedValue([]),
+      create: jest
+        .fn()
+        .mockRejectedValue(new Error("Unable to acquire IX lock")),
+    };
+    const idem = {
+      find: jest.fn(),
+      createProcessing: jest.fn(),
+      complete: jest.fn(),
+      fail: jest.fn(),
+    };
+    (svc as any).idempotencyRepo = idem;
+    (svc as any).stripe = { createPaymentIntent: jest.fn() };
+
+    await expect(
+      svc.processPayment({
+        payerId: "u1",
+        invoiceId: "inv1",
+        method: "Bank",
+        amount: 50,
+        idempotencyKey: "idem",
+      })
+    ).rejects.toThrow(/Unable to acquire IX lock/);
+    // ensure final fail is called after exhausting
+    expect(idem.fail).toHaveBeenCalledWith("idem", expect.any(Object));
+  });
+
+  it("Card path with requires_action returns Processing and clientSecret", async () => {
+    mkSession();
+    const svc = new PaymentService();
+    (svc as any).invoiceRepo = {
+      findById: jest.fn().mockResolvedValue({
+        _id: "inv1",
+        userId: { toString: () => "u1" },
+        amount: 1000,
+      }),
+      updateTotals: jest.fn(),
+    };
+    (svc as any).paymentRepo = {
+      findByInvoice: jest.fn().mockResolvedValue([]),
+      create: jest.fn().mockResolvedValue({
+        _id: "p1",
+        amount: 100,
+        gateway: "stripe",
+        transactionId: "pi_1",
+        status: "Processing",
+      }),
+    };
+    (svc as any).idempotencyRepo = {
+      find: jest.fn(),
+      createProcessing: jest.fn(),
+      complete: jest.fn(),
+    };
+    (svc as any).stripe = {
+      createPaymentIntent: jest.fn().mockResolvedValue({
+        id: "pi_1",
+        status: "requires_action",
+        clientSecret: "sec_123",
+        raw: {},
+      }),
+    };
+    (svc as any).receiptSvc = { generate: jest.fn().mockResolvedValue({}) };
+    (svc as any).notifier = { notifyPaymentSuccess: jest.fn() };
+
+    const res = await svc.processPayment({
+      payerId: "u1",
+      invoiceId: "inv1",
+      method: "Card",
+      amount: 100,
+    });
+    expect(res.clientSecret).toBe("sec_123");
+    // No totals update on Processing
+    expect((svc as any).invoiceRepo.updateTotals).not.toHaveBeenCalled();
+  });
+
+  it("handleGatewaySucceeded: invoice missing branch", async () => {
+    const svc = new PaymentService();
+    (svc as any).paymentRepo = {
+      findByTransactionId: jest.fn().mockResolvedValue({
+        _id: "p1",
+        status: "Processing",
+        invoiceId: { toString: () => "inv1" },
+      }),
+      updateStatus: jest.fn(),
+      findByInvoice: jest
+        .fn()
+        .mockResolvedValue([{ status: "Success", amount: 100 }]),
+    };
+    (svc as any).invoiceRepo = {
+      findById: jest.fn().mockResolvedValue(null),
+      updateTotals: jest.fn(),
+    };
+
+    await svc.handleGatewaySucceeded("pi_1");
+    expect((svc as any).invoiceRepo.updateTotals).not.toHaveBeenCalled();
   });
 });
