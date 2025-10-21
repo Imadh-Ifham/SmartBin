@@ -1,6 +1,7 @@
 import { qrCodeRepository } from "../repositories/qr-code.repository";
 import type { IQRCode } from "../models/qr-code.model";
 import imagekit from "../../../config/imagekit";
+import { smartBinService } from "./smartBin.service";
 
 export interface UploadResult {
   url: string;
@@ -20,7 +21,8 @@ export class QRCodeService {
       "North Central Province": "NCP",
       "Uva Province": "UP",
       "Sabaragamuwa Province": "SGP",
-    }
+    },
+    private binService = smartBinService
   ) {}
 
   private async generateDataUrl(text: string) {
@@ -101,6 +103,14 @@ export class QRCodeService {
     };
 
     return this.repo.create(doc);
+  }
+
+  async getByCode(code: string) {
+    const qr = await this.repo.findByCode(code);
+    if (!qr) return null;
+    // ask the bin service to find a bin by this qr code
+    const bin = await this.binService.getBin(undefined, qr.code as string);
+    return { qr, bin };
   }
 }
 
