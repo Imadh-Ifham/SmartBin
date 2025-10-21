@@ -1,10 +1,20 @@
-import React from "react";
-import VideoScanner from "../components/VideoScanner";
+import React, { useEffect } from "react";
 import ManualScanner from "../components/ManualScanner";
 import ScanDetails from "../components/ScanDetails";
 import { QrCode, Keyboard } from "lucide-react";
+import { useAppDispatch } from "../../../app/hooks";
+import { fetchBinTypes } from "../slices/collectorThunk";
 
 const ScannerPage: React.FC = () => {
+  const dispatch = useAppDispatch();
+
+  useEffect(() => {
+    const fetchData = async () => {
+      await dispatch(fetchBinTypes());
+    };
+    fetchData();
+  }, [dispatch]);
+
   return (
     <div className="flex flex-col md:flex-row gap-6 w-full p-4 md:p-6 bg-gray-50 min-h-screen">
       {/* Left Section — Scanners */}
@@ -14,9 +24,7 @@ const ScannerPage: React.FC = () => {
         </h2>
 
         {/* Video Scanner */}
-        <div className="relative mb-4">
-          <VideoScanner />
-        </div>
+        <div className="relative mb-4">{/* <VideoScanner /> */}</div>
 
         {/* Divider */}
         <div className="flex items-center my-4">

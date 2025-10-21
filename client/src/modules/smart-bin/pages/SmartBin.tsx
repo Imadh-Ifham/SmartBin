@@ -14,6 +14,7 @@ import { fetchBinTypes, fetchQRWithBins } from "../slices/binThunk";
 const SmartBin: React.FC = () => {
   const binCode = "WP-81582-K"; // fixed shared code
   const dispatch = useAppDispatch();
+
   // Selectors for bin state
   const bins = useSelector(selectBins);
   const loading = useSelector(selectBinsLoading);
