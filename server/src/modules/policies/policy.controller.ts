@@ -12,24 +12,38 @@ const ERROR_MESSAGES = {
   POLICY_NOT_FOUND: "Policy not found",
 };
 
+<<<<<<< Updated upstream
+=======
+// Use Zod's refinement context for transform callbacks. We cast to any when
+// calling addIssue to avoid tight coupling to Zod internal issue shapes.
+>>>>>>> Stashed changes
 export const feedbackDateSchema = z
   .union([z.string(), z.date()])
   .transform((value: string | Date, ctx: any) => {
     if (value instanceof Date) return value;
-    const normalized = value.trim();
+    const normalized = String(value ?? "").trim();
     if (!normalized) {
+<<<<<<< Updated upstream
       (ctx.addIssue as any)({
         code: z.ZodIssueCode.custom,
         message: "Invalid date",
       });
+=======
+      // Zod expects a specific issue shape; cast to any to satisfy TS
+      (ctx as any).addIssue?.({ code: z.ZodIssueCode.custom as any, message: "Invalid date" });
+>>>>>>> Stashed changes
       return z.NEVER;
     }
     const parsed = new Date(normalized);
     if (Number.isNaN(parsed.getTime())) {
+<<<<<<< Updated upstream
       (ctx.addIssue as any)({
         code: z.ZodIssueCode.custom,
         message: "Invalid date",
       });
+=======
+      (ctx as any).addIssue?.({ code: z.ZodIssueCode.custom as any, message: "Invalid date" });
+>>>>>>> Stashed changes
       return z.NEVER;
     }
     return parsed;
