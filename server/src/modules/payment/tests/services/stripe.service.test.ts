@@ -1,5 +1,5 @@
 import Stripe from "stripe";
-import { StripeService } from "../services/stripe.service";
+import { StripeService } from "../../services/stripe.service";
 
 jest.mock("stripe");
 

@@ -1,6 +1,6 @@
-import { ReceiptService } from "../services/receipt.service";
+import { ReceiptService } from "../../services/receipt.service";
 
-jest.mock("../repositories/receipt.repository", () => {
+jest.mock("../../repositories/receipt.repository", () => {
   return {
     ReceiptRepository: jest.fn().mockImplementation(() => ({
       create: jest.fn(async (doc: any) => ({ _id: "rcpt_1", ...doc })),

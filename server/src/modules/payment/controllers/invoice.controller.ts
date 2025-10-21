@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { InvoiceService } from "../services/invoice.service";
+import { CreateOverweightInvoiceSchema } from "../types/invoice.dto";
 
 const service = new InvoiceService();
 
@@ -65,5 +66,27 @@ export const getInvoicesByUser = async (req: Request, res: Response) => {
     return res.status(200).json(invoices);
   } catch (err: any) {
     return res.status(500).json({ message: err.message });
+  }
+};
+
+export const generateOverweightInvoice = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    // The route uses validateRequest with CreateOverweightInvoiceSchema
+    const dto = (req as any).validatedBody || req.body;
+    const actorId = (req as any).user?.id || "system";
+    const invoice = await service.createOverweightInvoice({ ...dto, actorId });
+    return res.status(201).json({
+      invoiceId: (invoice as any)._id,
+      userId: (invoice as any).userId,
+      amount: invoice.amount,
+      reason: invoice.reason,
+      status: invoice.status,
+      createdAt: invoice.createdAt,
+    });
+  } catch (err: any) {
+    return res.status(400).json({ message: err.message });
   }
 };

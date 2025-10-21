@@ -3,8 +3,9 @@ import { z } from "zod";
 import { scanService } from "../services/scan.service";
 
 const scanSchema = z.object({
-  raw: z.string().min(1),
+  code: z.string().min(1, "Scan code is required"),
   source: z.string().optional(),
+  userId: z.string().optional(),
 });
 
 export const sendError = (
@@ -17,12 +18,19 @@ export const sendError = (
 export const ScanController = {
   scan: async (req: Request, res: Response) => {
     try {
-      const { raw, source } = scanSchema.parse(req.body);
-      const result = await scanService.handleScan(raw, source || "camera");
+      const { code, source, userId } = scanSchema.parse(req.body);
+      const payload = {
+        code: code,
+        source: source || "camera",
+        userId: userId || "",
+      };
+      const result = await scanService.handleScan(payload);
       return res.json({ result });
     } catch (e: any) {
       if (e instanceof z.ZodError)
         return sendError(res, 400, "Validation failed", e.issues);
+      if (e && typeof e === "object" && e.status && e.message)
+        return sendError(res, e.status, e.message);
       return sendError(res, 500, e.message || "Server error");
     }
   },

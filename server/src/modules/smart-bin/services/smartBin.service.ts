@@ -16,11 +16,6 @@ export class SmartBinService {
     )
       throw new Error("Invalid bin type id");
     if (
-      typeof payload.qrCode === "string" &&
-      !Types.ObjectId.isValid(payload.qrCode)
-    )
-      throw new Error("Invalid QR code id");
-    if (
       payload.qrCode &&
       typeof payload.qrCode === "string" &&
       !Types.ObjectId.isValid(payload.qrCode)
@@ -34,9 +29,13 @@ export class SmartBinService {
     return this.repo.create(payload);
   }
 
-  async getBin(idOrCode: string) {
-    if (Types.ObjectId.isValid(idOrCode)) return this.repo.findById(idOrCode);
-    return this.repo.findByCode(idOrCode);
+  async getBin(id?: string, qrCode?: string) {
+    if (id) {
+      return this.repo.findById(id!);
+    }
+    if (qrCode) {
+      return this.repo.findByCode(qrCode!);
+    }
   }
 
   async list(query: any = {}) {
@@ -54,14 +53,11 @@ export class SmartBinService {
     return this.repo.deleteById(id);
   }
 
-  async reportWeight(codeOrId: string, weight: number) {
-    const bin: any = await this.getBin(codeOrId);
+  async reportWeight(id: string, weight: number) {
+    const bin: any = await this.getBin(id);
     if (!bin) throw new Error("Bin not found");
     bin.currentWeight = weight;
-    // optional threshold event: switch status to InMaintenance if over limit
-    if (bin.limit && bin.currentWeight > bin.limit) {
-      bin.status = "InMaintenance";
-    }
+
     return this.repo.update(bin);
   }
 }

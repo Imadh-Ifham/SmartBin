@@ -10,9 +10,10 @@ import { errorHandler } from "./middleware/errorHandler";
 import { metricsMiddleware } from "./middleware/metricsMiddleware";
 import policiesRouter from "./modules/policies/policy.routes";
 import authRoutes from "./modules/auth/routes/auth.routes";
-import invoiceRoutes from "./modules/payment/routes/invoice.routes";
 import paymentRoutes from "./modules/payment/routes/payment.routes";
-import { binTypeRoutes, binRoutes } from "./modules/smart-bin/routes";
+import invoiceRoutes from "./modules/payment/routes/invoice.routes";
+import wasteCollectionRoutes from "./modules/waste-collection/routes/waste-collection.routes";
+import { binTypeRoutes, binRoutes, qrRoutes } from "./modules/smart-bin/routes";
 
 const app: Application = express();
 
@@ -65,6 +66,8 @@ app.use("/api/payments", invoiceRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/bin-types", binTypeRoutes);
 app.use("/api/bins", binRoutes);
+app.use("/api/qrs", qrRoutes);
+app.use("/api/waste-collections", wasteCollectionRoutes);
 
 // Error Handler
 app.use(errorHandler);

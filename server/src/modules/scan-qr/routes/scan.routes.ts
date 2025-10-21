@@ -4,6 +4,6 @@ import { authenticate } from "../../../middleware/authenticate";
 
 const router = Router();
 
-router.post("/", authenticate, asyncHandler(ScanController.scan));
+router.post("/", asyncHandler(ScanController.scan));
 
 export default router;

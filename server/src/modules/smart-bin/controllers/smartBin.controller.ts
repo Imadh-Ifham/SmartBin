@@ -1,17 +1,12 @@
-import { Request, Response, NextFunction } from "express";
+import { Request, Response } from "express";
 import { z } from "zod";
 import { smartBinService } from "../services/smartBin.service";
+import { IBin } from "../models/smartBin.model";
 
 const createSchema = z.object({
-  code: z.string().min(1),
+  qrCode: z.string().min(1),
   type: z.string().min(1),
   limit: z.number().optional(),
-  location: z
-    .object({
-      type: z.literal("Point"),
-      coordinates: z.tuple([z.number(), z.number()]),
-    })
-    .optional(),
 });
 
 const weightSchema = z.object({ weight: z.number() });
@@ -27,7 +22,9 @@ export const SmartBinController = {
   create: async (req: Request, res: Response) => {
     try {
       const payload = createSchema.parse(req.body);
-      const bin = await smartBinService.createBin(payload as any);
+      const bin = await smartBinService.createBin(
+        payload as unknown as Partial<IBin>
+      );
       return res.status(201).json({ message: "Bin created", bin });
     } catch (e: any) {
       if (e instanceof z.ZodError)
@@ -36,11 +33,23 @@ export const SmartBinController = {
     }
   },
 
-  get: async (req: Request, res: Response) => {
+  getById: async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
       if (!id) return sendError(res, 400, "Invalid id");
       const bin = await smartBinService.getBin(id);
+      if (!bin) return sendError(res, 404, "Bin not found");
+      return res.json({ bin });
+    } catch (e: any) {
+      return sendError(res, 500, e.message || "Server error");
+    }
+  },
+
+  getByQRCode: async (req: Request, res: Response) => {
+    try {
+      const { qrCode } = req.params;
+      if (!qrCode) return sendError(res, 400, "Invalid qrCode");
+      const bin = await smartBinService.getBin(undefined, qrCode);
       if (!bin) return sendError(res, 404, "Bin not found");
       return res.json({ bin });
     } catch (e: any) {
@@ -95,40 +104,4 @@ export const SmartBinController = {
       return sendError(res, 500, e.message || "Server error");
     }
   },
-
-  startMaintenance: async (req: Request, res: Response) => {
-    try {
-      const { id } = req.params;
-      if (!id) return sendError(res, 400, "Invalid id");
-      const bin: any = await smartBinService.getBin(id);
-      if (!bin) return sendError(res, 404, "Bin not found");
-      bin.status = "InMaintenance";
-      const updated = await smartBinService.updateBin(bin._id.toString(), {
-        status: bin.status,
-      } as any);
-      return res.json({ message: "Maintenance started", bin: updated });
-    } catch (e: any) {
-      return sendError(res, 500, e.message || "Server error");
-    }
-  },
-
-  finishMaintenance: async (req: Request, res: Response) => {
-    try {
-      const { id } = req.params;
-      if (!id) return sendError(res, 400, "Invalid id");
-      const bin: any = await smartBinService.getBin(id);
-      if (!bin) return sendError(res, 404, "Bin not found");
-      bin.status = "Active";
-      const updated = await smartBinService.updateBin(bin._id.toString(), {
-        status: bin.status,
-      } as any);
-      return res.json({ message: "Maintenance finished", bin: updated });
-    } catch (e: any) {
-      return sendError(res, 500, e.message || "Server error");
-    }
-  },
 };
-
-export const asyncHandler =
-  (fn: any) => (req: Request, res: Response, next: NextFunction) =>
-    Promise.resolve(fn(req, res, next)).catch(next);

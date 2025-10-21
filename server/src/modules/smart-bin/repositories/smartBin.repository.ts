@@ -1,4 +1,3 @@
-import { BinType } from "../models/bin-type.model";
 import { Bin, IBin } from "../models/smartBin.model";
 import { Types } from "mongoose";
 
@@ -9,11 +8,11 @@ export class SmartBinRepository {
 
   async findById(id: string) {
     if (!Types.ObjectId.isValid(id)) return null;
-    return Bin.findById(id);
+    return Bin.findById(id, { createdAt: 0, updatedAt: 0 });
   }
 
-  async findByCode(code: string) {
-    return Bin.findOne({ code });
+  async findByCode(qrCode: string) {
+    return Bin.find({ qrCode }, { createdAt: 0, updatedAt: 0 });
   }
 
   async create(doc: Partial<IBin>) {

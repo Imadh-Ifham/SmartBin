@@ -1,17 +1,25 @@
 import { ScanEvent } from "../models/scan.model";
+import { IScanPayload } from "../services/scan.service";
 
+/**
+ * Repository layer for storing QR scan events.
+ *
+ * Responsibilities:
+ * - Encapsulates database persistence logic
+ * - Provides a single point for saving scan records
+ */
 export class ScanRepository {
-  async save(doc: any) {
+  /**
+   * Saves a new scan event to the database.
+   *
+   * @param doc - Scan payload containing code, source, and optional userId
+   * @returns The saved ScanEvent document
+   */
+  async save(doc: IScanPayload) {
     const s = new ScanEvent(doc);
     return s.save();
   }
-
-  async findRecentByRaw(raw: string, sinceMs: number = 1500) {
-    const since = new Date(Date.now() - sinceMs);
-    return ScanEvent.find({ raw, createdAt: { $gte: since } })
-      .sort({ createdAt: -1 })
-      .limit(10);
-  }
 }
 
+/** Singleton instance of ScanRepository */
 export const scanRepository = new ScanRepository();
