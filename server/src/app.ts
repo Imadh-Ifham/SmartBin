@@ -12,6 +12,7 @@ import policiesRouter from "./modules/policies/policy.routes";
 import authRoutes from "./modules/auth/routes/auth.routes";
 import paymentRoutes from "./modules/payment/routes/payment.routes";
 import invoiceRoutes from "./modules/payment/routes/invoice.routes";
+import wasteCollectionRoutes from "./modules/waste-collection/routes/waste-collection.routes";
 import { binTypeRoutes, binRoutes, qrRoutes } from "./modules/smart-bin/routes";
 
 const app: Application = express();
@@ -66,6 +67,7 @@ app.use("/api/payments", paymentRoutes);
 app.use("/api/bin-types", binTypeRoutes);
 app.use("/api/bins", binRoutes);
 app.use("/api/qrs", qrRoutes);
+app.use("/api/waste-collections", wasteCollectionRoutes);
 
 // Error Handler
 app.use(errorHandler);
