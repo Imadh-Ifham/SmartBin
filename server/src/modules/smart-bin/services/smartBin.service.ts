@@ -53,14 +53,11 @@ export class SmartBinService {
     return this.repo.deleteById(id);
   }
 
-  async reportWeight(codeOrId: string, weight: number) {
-    const bin: any = await this.getBin(codeOrId);
+  async reportWeight(id: string, weight: number) {
+    const bin: any = await this.getBin(id);
     if (!bin) throw new Error("Bin not found");
     bin.currentWeight = weight;
-    // optional threshold event: switch status to InMaintenance if over limit
-    if (bin.limit && bin.currentWeight > bin.limit) {
-      bin.status = "InMaintenance";
-    }
+
     return this.repo.update(bin);
   }
 }

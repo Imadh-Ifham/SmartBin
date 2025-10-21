@@ -4,13 +4,12 @@ import QRPanel from "../components/QRPanel";
 import WeightForm from "../components/WeightForm";
 import { useAppDispatch } from "../../../app/hooks";
 import {
-  fetchBinTypes,
-  fetchQRWithBins,
   selectBins,
   selectBinsError,
   selectBinsLoading,
 } from "../slices/binSlice";
 import { useSelector } from "react-redux";
+import { fetchBinTypes, fetchQRWithBins } from "../slices/binThunk";
 
 const SmartBin: React.FC = () => {
   const binCode = "WP-81582-K"; // fixed shared code
@@ -49,7 +48,7 @@ const SmartBin: React.FC = () => {
 
       {/* --- SCROLL FORM SECTION --- */}
       <div className="w-full flex justify-center px-6 md:px-12 pb-12">
-        {/* <WeightForm /> */}
+        <WeightForm />
       </div>
     </div>
   );

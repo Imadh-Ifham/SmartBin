@@ -33,7 +33,6 @@ router.delete(
 
 router.post(
   "/:id/report-weight",
-  authenticate,
   asyncHandler(SmartBinController.reportWeight)
 );
 

@@ -1,43 +1,8 @@
-import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
 import type { Bin, BinType, QR, QRWithBins } from "../types/bin";
-import { fetchQRWithBinsApi } from "../../../api/bin/bin.api";
-import { fetchBinTypesApi } from "../../../api/bin/bin.api";
-// Thunk to fetch BinTypes
-export const fetchBinTypes = createAsyncThunk(
-  "bins/fetchBinTypes",
-  async (_, { rejectWithValue }) => {
-    try {
-      const data = await fetchBinTypesApi();
-      return data;
-    } catch (err: any) {
-      return rejectWithValue(
-        err?.response?.data?.message ||
-          err.message ||
-          "Failed to fetch bin types"
-      );
-    }
-  }
-);
 import type { RootState } from "../../../app/store";
-
-// Usage: AppDispatch(fetchQRWithBins(qrCode))
-export const fetchQRWithBins = createAsyncThunk(
-  "bins/fetchQRWithBins",
-  async (qrCode: string, { rejectWithValue }) => {
-    try {
-      const data = await fetchQRWithBinsApi(qrCode);
-      console.log("Fetched QRWithBins data:", data);
-      return data;
-    } catch (err: any) {
-      return rejectWithValue(
-        err?.response?.data?.message ||
-          err.message ||
-          "Failed to fetch QR/bin data"
-      );
-    }
-  }
-);
+import { fetchBinTypes, fetchQRWithBins, updateBinWeight } from "./binThunk";
 
 interface BinState {
   qr: QR | null;
@@ -92,6 +57,25 @@ const binSlice = createSlice({
       .addCase(fetchBinTypes.rejected, (state, action) => {
         state.loading = false;
         state.error = action.error.message || "Failed to fetch bin types";
+      })
+      // Handle updateBinWeight thunk
+      .addCase(updateBinWeight.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(
+        updateBinWeight.fulfilled,
+        (state, action: PayloadAction<Bin>) => {
+          const updatedBin = action.payload;
+          state.bins = state.bins.map((bin) =>
+            bin._id === updatedBin._id ? updatedBin : bin
+          );
+          state.loading = false;
+        }
+      )
+      .addCase(updateBinWeight.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || "Failed to update bin weight";
       });
   },
 });
