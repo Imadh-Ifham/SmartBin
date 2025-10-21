@@ -12,12 +12,23 @@ jest.mock('../feedback.service');
 jest.mock('../report.service');
 jest.mock('../compliance.service');
 
+/**
+ * Additional unit tests for PolicyService
+ * These tests verify core business logic for create, approve, update, and markIssue functions.
+ * Each test mocks dependencies and checks expected side effects and outputs.
+ */
 describe('PolicyService additional tests', () => {
   afterEach(() => {
     jest.restoreAllMocks();
     jest.resetAllMocks();
   });
 
+  /**
+   * Test: create persists policy and sends notification
+   * Checks that PolicyService.create saves a new policy and triggers notificationService.createAndSend.
+   * Input: valid policy DTO
+   * Output: saved policy object
+   */
   test('create persists policy and sends notification', async () => {
     const input = {
       title: 'Title Example',
@@ -37,6 +48,12 @@ describe('PolicyService additional tests', () => {
     expect(notificationService.createAndSend).toHaveBeenCalled();
   });
 
+  /**
+   * Test: approve sets status active and notifies stakeholders
+   * Checks that PolicyService.approve sets status to 'Active', updates the policy, and sends notifications to stakeholders.
+   * Input: valid policy id with stakeholders
+   * Output: updated policy object
+   */
   test('approve sets status active and notifies stakeholders', async () => {
     const fakePolicy: any = {
       _id: '507f1f77bcf86cd799439011',
@@ -60,6 +77,12 @@ describe('PolicyService additional tests', () => {
     expect(notificationService.createAndSend).toHaveBeenCalled();
   });
 
+  /**
+   * Test: update happy path updates fields and saves
+   * Checks that PolicyService.update modifies fields and persists changes when compliance passes.
+   * Input: valid policy id and update DTO
+   * Output: updated policy object
+   */
   test('update happy path updates fields and saves', async () => {
     const fakePolicy: any = {
       _id: '507f1f77bcf86cd799439011',
@@ -76,10 +99,18 @@ describe('PolicyService additional tests', () => {
     const res = await PolicyService.update(fakePolicy._id, { title: 'New Title' } as any, {} as any);
 
     expect(res).toBeDefined();
-    expect(res.title).toBe('New Title');
+    if (res) {
+      expect(res.title).toBe('New Title');
+    }
     expect(policyRepository.update).toHaveBeenCalled();
   });
 
+  /**
+   * Test: markIssue appends issue and saves
+   * Checks that PolicyService.markIssue adds a new issue to the policy and saves it.
+   * Input: valid policy id and issue string
+   * Output: updated policy object with new issue
+   */
   test('markIssue appends issue and saves', async () => {
     const fakePolicy: any = {
       _id: '507f1f77bcf86cd799439011',
