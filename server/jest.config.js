@@ -17,5 +17,8 @@ module.exports = {
   collectCoverageFrom: ['src/modules/policies/**/*.{ts,tsx}'],
   coverageDirectory: 'coverage',
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 };

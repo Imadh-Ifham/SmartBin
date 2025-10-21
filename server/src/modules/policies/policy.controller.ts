@@ -13,6 +13,11 @@ const ERROR_MESSAGES = {
 };
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+=======
+// Use Zod's refinement context for transform callbacks. We cast to any when
+// calling addIssue to avoid tight coupling to Zod internal issue shapes.
+>>>>>>> Stashed changes
 =======
 // Use Zod's refinement context for transform callbacks. We cast to any when
 // calling addIssue to avoid tight coupling to Zod internal issue shapes.
@@ -24,10 +29,15 @@ export const feedbackDateSchema = z
     const normalized = String(value ?? "").trim();
     if (!normalized) {
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
       (ctx.addIssue as any)({
         code: z.ZodIssueCode.custom,
         message: "Invalid date",
       });
+=======
+      // Zod expects a specific issue shape; cast to any to satisfy TS
+      (ctx as any).addIssue?.({ code: z.ZodIssueCode.custom as any, message: "Invalid date" });
+>>>>>>> Stashed changes
 =======
       // Zod expects a specific issue shape; cast to any to satisfy TS
       (ctx as any).addIssue?.({ code: z.ZodIssueCode.custom as any, message: "Invalid date" });
@@ -37,10 +47,14 @@ export const feedbackDateSchema = z
     const parsed = new Date(normalized);
     if (Number.isNaN(parsed.getTime())) {
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
       (ctx.addIssue as any)({
         code: z.ZodIssueCode.custom,
         message: "Invalid date",
       });
+=======
+      (ctx as any).addIssue?.({ code: z.ZodIssueCode.custom as any, message: "Invalid date" });
+>>>>>>> Stashed changes
 =======
       (ctx as any).addIssue?.({ code: z.ZodIssueCode.custom as any, message: "Invalid date" });
 >>>>>>> Stashed changes
