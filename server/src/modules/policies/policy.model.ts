@@ -1,6 +1,25 @@
 import { Schema, model, Document, Types } from "mongoose";
 import { POLICY_STATUS, COMPLIANCE_STATUS, STAKEHOLDER_TYPES } from "./constants";
 
+/**
+ * Policy model types and Mongoose schema
+ *
+ * This file defines TypeScript interfaces that represent the data shapes used by the
+ * PolicyService and the Mongoose schemas that persist them. Keeping types and schema
+ * definitions colocated helps ensure the TypeScript types reflect the stored data.
+ *
+ * Important types:
+ * - PolicyFeedback: a feedback entry provided/requested from stakeholders
+ * - PolicyAuditEntry: audit trail entries (action, date, optional user who triggered it)
+ * - IPolicy: main document interface used across services/controllers
+ *
+ * Design notes:
+ * - The schema uses subdocuments for feedback and auditTrail to keep related data
+ *   embedded with the policy document (good for read-heavy operations and atomic updates).
+ * - A text index is created for title/description/ministry to allow simple search via
+ *   the `q` filter in queries (used in PolicyService.list).
+ */
+
 export type PolicyStatus = typeof POLICY_STATUS[keyof typeof POLICY_STATUS];
 export type PolicyComplianceStatus = typeof COMPLIANCE_STATUS[keyof typeof COMPLIANCE_STATUS];
 export type PolicyStakeholderType = typeof STAKEHOLDER_TYPES[keyof typeof STAKEHOLDER_TYPES];
@@ -87,6 +106,7 @@ const PolicySchema = new Schema<IPolicy>(
   }
 );
 
+// Text index to support simple q-based search in PolicyService.list
 PolicySchema.index({ title: "text", description: "text", ministry: "text" });
 
 export const Policy = model<IPolicy>("Policy", PolicySchema);

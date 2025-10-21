@@ -1,2 +1,13 @@
-/* Minimal global CSS: load Tailwind only */
+/* Minimal global CSS: load Tailwind and shared component styles */
 @import "tailwindcss";
+
+/* CSS variables used across component styles */
+@import "./styles/variables.css";
+
+/* Component-level styles (custom UI classes used by layouts/pages) */
+@import "./styles/components/navigation.css";
+@import "./styles/components/buttons.css";
+@import "./styles/components/forms.css";
+@import "./styles/components/cards.css";
+@import "./styles/components/tables.css";
+@import "./styles/components/alerts.css";
