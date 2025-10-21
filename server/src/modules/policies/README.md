@@ -68,3 +68,68 @@ const newPolicy = await PolicyService.create({
 ---
 
 For further details, see the JSDoc comments in each file and function.
+
+## Endpoint Reference
+
+This is a quick reference of available HTTP endpoints exposed by the policy module.
+
+- GET /policies/ — list policies. Supports query params: q, category, ministry, status, complianceStatus
+- GET /policies/:id — get a single policy by id
+- GET /policies/:id/versions — get historical versions for a policy (PolicyVersion records)
+- GET /policies/:id/audit — get the audit trail for a policy
+- POST /policies/ — create a policy (requires authority)
+- PUT /policies/:id — update a policy (requires authority)
+- POST /policies/:id/approve — approve a policy (requires authority)
+- POST /policies/:id/issue — flag an issue on a policy (requires authority)
+- POST /policies/:id/feedbackRequest — request stakeholder feedback (requires authority)
+- POST /policies/:id/revalidateCompliance — re-run compliance check and notify if changed (requires authority)
+- DELETE /policies/:id — delete a policy (requires authority)
+
+## DTO / Data shapes (examples)
+
+CreatePolicy (PolicyCreateDTO):
+
+{
+"title": "Waste Management Policy",
+"description": "Detailed description...",
+"effectiveDate": "2025-10-01",
+"ministry": "Environment",
+"category": "Waste",
+"feedback": [{ "stakeholderType": "Resident", "message": "Please review" }]
+}
+
+UpdatePolicy (PolicyUpdateDTO): partial fields allowed, e.g.:
+
+{ "title": "Updated title" }
+
+FeedbackRequest:
+
+{ "stakeholderGroups": ["resident","business"], "message": "Please review this policy" }
+
+## How to run tests (module-only)
+
+Run Jest from the `server` project root but target the policies module to ensure project transforms are used and avoid cross-package haste-map issues:
+
+```powershell
+cd c:\Users\lenovo\Desktop\SmartBin\SmartBin\server
+npx jest src/modules/policies --runInBand --coverage --no-cache
+```
+
+Notes:
+
+- Use `--runInBand` when debugging or when jest haste-map memory issues arise.
+
+## Design notes points
+
+- Separation of concerns: controllers validate and map HTTP requests; services implement business rules and orchestrate collaborators; repositories encapsulate data access.
+- Patterns used:
+  - Controller pattern: thin HTTP handlers delegating to services.
+  - Service Layer: business logic (PolicyService) coordinates multiple helper services.
+  - Repository Pattern: `policyRepository` isolates database operations and improves testability.
+  - Strategy-like extensibility: `complianceService` is pluggable so compliance logic can be swapped.
+- Error handling strategy:
+  - Controllers return 400 for validation issues, 404 for not found, and 500 for server errors.
+  - Services perform best-effort side-effects (notifications) and log warnings rather than failing the whole operation.
+- Testing approach:
+  - Unit tests mock external collaborators (notificationService, complianceService, policyRepository) to exercise service logic and edge cases.
+  - Integration tests (Supertest) exercise routes and middleware.
