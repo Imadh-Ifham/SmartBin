@@ -1,4 +1,5 @@
 module.exports = {
+<<<<<<< Updated upstream
   preset: "ts-jest",
   testEnvironment: "node",
   roots: ["<rootDir>/src"],
@@ -9,4 +10,12 @@ module.exports = {
     "!**/*.test.ts",
   ],
   coverageDirectory: "coverage",
+=======
+  preset: 'ts-jest',
+  testEnvironment: 'node',
+  roots: ['<rootDir>/src'],
+  collectCoverageFrom: ['src/modules/policies/**/*.{ts,tsx}'],
+  coverageDirectory: 'coverage',
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
+>>>>>>> Stashed changes
 };
