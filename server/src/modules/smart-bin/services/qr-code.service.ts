@@ -112,6 +112,11 @@ export class QRCodeService {
     const bins = await this.binService.getBin(undefined, qr._id.toString());
     return { qr, bins };
   }
+
+  async checkSubscription(status: string) {
+    if (status !== "Active") return false;
+    return true;
+  }
 }
 
 export const qrCodeService = new QRCodeService();
