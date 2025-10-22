@@ -38,6 +38,16 @@ const ScanDetails: React.FC = () => {
   const handleMarkCollected = async () => {
     if (!qr?.code) return;
 
+    // Prevent collection if overweight and not paid
+    if (overweight) {
+      toast.error("Cannot collect! Payment required for overweight bins.", {
+        duration: 4000,
+        position: "top-center",
+        icon: "❌",
+      });
+      return;
+    }
+
     try {
       await dispatch(markBinsCollected(qr.code)).unwrap();
       // Success - show toast notification
@@ -154,8 +164,17 @@ const ScanDetails: React.FC = () => {
         <div className="flex gap-3 mt-5">
           <button
             onClick={handleMarkCollected}
-            disabled={loading}
-            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white px-4 py-2 rounded-lg font-medium transition"
+            disabled={loading || !!overweight}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition ${
+              overweight
+                ? "bg-gray-400 cursor-not-allowed text-white"
+                : "bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white"
+            }`}
+            title={
+              overweight
+                ? "Payment required for overweight bins"
+                : "Mark bins as collected"
+            }
           >
             <CheckCircle size={18} />
             {loading ? "Processing..." : "Mark Collected"}

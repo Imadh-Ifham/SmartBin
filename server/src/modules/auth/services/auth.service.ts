@@ -37,6 +37,10 @@ export class AuthService {
     return (jwt.sign as any)(payload, secret, { expiresIn: "7d" });
   }
 
+  async getUserId() {
+    return "68f4c9cc5bfdf8f29b292b0f";
+  }
+
   async register(
     username: string,
     email: string,
@@ -81,9 +85,9 @@ export class AuthService {
 
   async login(email: string, password: string) {
     // First, check for reserved admin credentials (fixed admin login via ENV)
-  // Default admin credentials for local/dev testing. In production override via ENV.
-  const envAdminUser = process.env.ADMIN_USERNAME ?? "admin@gmail.com";
-  const envAdminPass = process.env.ADMIN_PASSWORD ?? "admin123";
+    // Default admin credentials for local/dev testing. In production override via ENV.
+    const envAdminUser = process.env.ADMIN_USERNAME ?? "admin@gmail.com";
+    const envAdminPass = process.env.ADMIN_PASSWORD ?? "admin123";
 
     if (email === envAdminUser) {
       // validate against ENV password (no DB lookup required)

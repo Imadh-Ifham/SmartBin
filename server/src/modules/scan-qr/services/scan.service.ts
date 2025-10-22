@@ -1,3 +1,5 @@
+import { AuthService } from "../../auth/services/auth.service";
+import { InvoiceService } from "../../payment/services/invoice.service";
 import { qrCodeService } from "../../smart-bin/services/qr-code.service";
 import { smartBinService } from "../../smart-bin/services/smartBin.service";
 import { scanRepository } from "../repositories/scan.repository";
@@ -29,7 +31,9 @@ export class ScanService {
   constructor(
     private qrService = qrCodeService,
     private repo = scanRepository,
-    private binService = smartBinService
+    private binService = smartBinService,
+    private invoiceService = new InvoiceService(),
+    private authService = new AuthService()
   ) {}
 
   /**
