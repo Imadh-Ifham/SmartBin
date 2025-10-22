@@ -14,6 +14,7 @@ import paymentRoutes from "./modules/payment/routes/payment.routes";
 import invoiceRoutes from "./modules/payment/routes/invoice.routes";
 import wasteCollectionRoutes from "./modules/waste-collection/routes/waste-collection.routes";
 import { binTypeRoutes, binRoutes, qrRoutes } from "./modules/smart-bin/routes";
+import scanRoutes from "./modules/scan-qr/routes/scan.routes";
 
 const app: Application = express();
 
@@ -68,6 +69,7 @@ app.use("/api/bin-types", binTypeRoutes);
 app.use("/api/bins", binRoutes);
 app.use("/api/qrs", qrRoutes);
 app.use("/api/waste-collections", wasteCollectionRoutes);
+app.use("/api/scans", scanRoutes);
 
 // Error Handler
 app.use(errorHandler);

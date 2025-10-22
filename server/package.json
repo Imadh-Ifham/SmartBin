@@ -14,7 +14,8 @@
     "test:watch": "jest --watch",
     "test:smart-bin": "jest --testPathPattern='src/modules/smart-bin/' --coverage --collectCoverageFrom='src/modules/smart-bin/**/{models,repositories,services}/**/*.ts' --coverageDirectory=coverage/smart-bin",
     "test:waste-collection": "jest --testPathPattern='src/modules/waste-collection/' --coverage --collectCoverageFrom='src/modules/waste-collection/**/{models,services}/**/*.ts' --coverageDirectory=coverage/waste-collection",
-    "test:payment": "jest --testPathPattern='src/modules/payment/' --coverage --collectCoverageFrom='src/modules/payment/**/{models,repositories,services}/**/*.ts' --coverageDirectory=coverage/payment"
+    "test:payment": "jest --testPathPattern='src/modules/payment/' --coverage --collectCoverageFrom='src/modules/payment/**/{models,repositories,services}/**/*.ts' --coverageDirectory=coverage/payment",
+    "test:scan-qr": "jest --testPathPattern='src/modules/scan-qr/' --coverage --collectCoverageFrom='src/modules/scan-qr/**/{models,repositories,services}/**/*.ts' --coverageDirectory=coverage/scan-qr"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
