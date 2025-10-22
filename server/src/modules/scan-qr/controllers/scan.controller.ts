@@ -22,7 +22,7 @@ export const ScanController = {
       const payload = {
         code: code,
         source: source || "camera",
-        userId: userId || "",
+        userId: userId || "68f52d33aa1ef12118d1ff56",
       };
       const result = await scanService.handleScan(payload);
       return res.json({ result });

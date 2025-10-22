@@ -1,9 +1,6 @@
 import React, { useState } from "react";
 import { useAppDispatch } from "../../../app/hooks";
-import {
-  fetchBinTypes,
-  fetchQRWithBins,
-} from "../../smart-bin/slices/binThunk";
+import { scanQRCode } from "../slices/scanThunk";
 
 const ManualScanner: React.FC = () => {
   const [value, setValue] = useState("");
@@ -11,11 +8,14 @@ const ManualScanner: React.FC = () => {
   const dispatch = useAppDispatch();
 
   const handleSubmit = () => {
-    const fetchData = async () => {
-      await dispatch(fetchQRWithBins(value));
-      await dispatch(fetchBinTypes());
-    };
-    fetchData();
+    if (!value.trim()) return;
+
+    dispatch(
+      scanQRCode({
+        code: value,
+        source: "manual",
+      })
+    );
   };
 
   return (

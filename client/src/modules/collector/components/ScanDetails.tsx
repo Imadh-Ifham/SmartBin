@@ -1,19 +1,41 @@
 import React from "react";
 import { Trash2, MapPin, User, CheckCircle, XCircle } from "lucide-react";
 import { useSelector } from "react-redux";
-import { selectBins, selectQR } from "../../smart-bin/slices/binSlice";
+import {
+  selectScanBins,
+  selectScanQR,
+  selectScanLoading,
+  selectScanError,
+} from "../slices/scanSlice";
 import BinCard from "./BinCard";
 
 const ScanDetails: React.FC = () => {
-  // Use the first bin as an example; replace with logic to select the scanned bin as needed
-  const bins = useSelector(selectBins);
-  const qr = useSelector(selectQR);
-  const bin = bins && bins.length > 0 ? bins[0] : null;
+  const bins = useSelector(selectScanBins);
+  const qr = useSelector(selectScanQR);
+  const loading = useSelector(selectScanLoading);
+  const error = useSelector(selectScanError);
 
-  if (!bin || !qr) {
+  if (loading) {
     return (
       <div className="w-full max-w-2xl bg-white rounded-2xl shadow-lg p-6 border border-gray-100 text-center text-gray-500">
-        No bin data available.
+        Loading scan data...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="w-full max-w-2xl bg-white rounded-2xl shadow-lg p-6 border border-gray-100 text-center">
+        <div className="text-red-600 font-semibold mb-2">Error</div>
+        <div className="text-gray-600">{error}</div>
+      </div>
+    );
+  }
+
+  if (!qr || !bins || bins.length === 0) {
+    return (
+      <div className="w-full max-w-2xl bg-white rounded-2xl shadow-lg p-6 border border-gray-100 text-center text-gray-500">
+        No bin data available. Scan a QR code to get started.
       </div>
     );
   }
@@ -31,10 +53,10 @@ const ScanDetails: React.FC = () => {
       </div>
 
       <div className="mt-5 space-y-4 text-gray-700">
-        {/* Owner Info */}
+        {/* QR Code */}
         <div className="flex items-center gap-2">
           <User className="text-gray-500" />
-          <span className="font-semibold">{qr.ownerName || "-"}</span>
+          <span className="font-semibold">Code: {qr.code}</span>
         </div>
 
         {/* Address */}
@@ -48,16 +70,11 @@ const ScanDetails: React.FC = () => {
           </div>
         </div>
 
-        {/* Bin Code */}
-        <div>
-          <span className="font-semibold text-gray-800">Bin Code:</span>{" "}
-          <span className="text-gray-600">{bin._id}</span>
-        </div>
-
-        {/* Waste Type Details (for this bin) */}
-
-        <div className="mt-4" key={bin._id}>
-          <h4 className="font-semibold text-gray-800 mb-2">Bin Details</h4>
+        {/* Bins List */}
+        <div className="mt-4">
+          <h4 className="font-semibold text-gray-800 mb-2">
+            Bins ({bins.length})
+          </h4>
           <div className="space-y-2">
             {bins.map((bin) => (
               <BinCard bin={bin} key={bin._id} />
