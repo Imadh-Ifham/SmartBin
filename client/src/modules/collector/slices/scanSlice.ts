@@ -2,7 +2,7 @@ import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
 import type { RootState } from "../../../app/store";
 import type { ScanState, ScanResult, QRData, BinData } from "../types/scan";
-import { scanQRCode } from "./scanThunk";
+import { scanQRCode, markBinsCollected } from "./scanThunk";
 
 const initialState: ScanState = {
   currentScan: null,
@@ -92,6 +92,28 @@ const scanSlice = createSlice({
           state.error = error.message;
         } else {
           state.error = action.error.message || "Failed to scan QR code";
+        }
+      })
+      // Handle markBinsCollected thunk
+      .addCase(markBinsCollected.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(markBinsCollected.fulfilled, (state) => {
+        state.loading = false;
+        // Clear current scan after successful collection
+        state.currentScan = null;
+      })
+      .addCase(markBinsCollected.rejected, (state, action) => {
+        state.loading = false;
+
+        // Handle structured error or fallback to generic message
+        if (action.payload && typeof action.payload === "object") {
+          const error = action.payload as { message: string; status?: number };
+          state.error = error.message;
+        } else {
+          state.error =
+            action.error.message || "Failed to mark bins as collected";
         }
       });
   },

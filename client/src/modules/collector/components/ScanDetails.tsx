@@ -1,19 +1,50 @@
 import React from "react";
 import { Trash2, MapPin, User, CheckCircle, XCircle } from "lucide-react";
 import { useSelector } from "react-redux";
+import toast from "react-hot-toast";
 import {
   selectScanBins,
   selectScanQR,
   selectScanLoading,
   selectScanError,
+  clearCurrentScan,
 } from "../slices/scanSlice";
+import { markBinsCollected } from "../slices/scanThunk";
 import BinCard from "./BinCard";
+import { useAppDispatch } from "../../../app/hooks";
 
 const ScanDetails: React.FC = () => {
+  const dispatch = useAppDispatch();
   const bins = useSelector(selectScanBins);
   const qr = useSelector(selectScanQR);
   const loading = useSelector(selectScanLoading);
   const error = useSelector(selectScanError);
+
+  const handleSkip = () => {
+    dispatch(clearCurrentScan());
+  };
+
+  const handleMarkCollected = async () => {
+    if (!qr?.code) return;
+
+    try {
+      await dispatch(markBinsCollected(qr.code)).unwrap();
+      // Success - show toast notification
+      toast.success(`Bins collected successfully! (${qr.code})`, {
+        duration: 3000,
+        position: "top-center",
+        icon: "✅",
+      });
+      // State will be cleared automatically by the reducer
+    } catch (error) {
+      // Error will be shown in the UI via selectScanError
+      toast.error("Failed to mark bins as collected", {
+        duration: 4000,
+        position: "top-center",
+      });
+      console.error("Failed to mark bins as collected:", error);
+    }
+  };
 
   if (loading) {
     return (
@@ -84,10 +115,19 @@ const ScanDetails: React.FC = () => {
 
         {/* Actions */}
         <div className="flex gap-3 mt-5">
-          <button className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition">
-            <CheckCircle size={18} /> Mark Collected
+          <button
+            onClick={handleMarkCollected}
+            disabled={loading}
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white px-4 py-2 rounded-lg font-medium transition"
+          >
+            <CheckCircle size={18} />
+            {loading ? "Processing..." : "Mark Collected"}
           </button>
-          <button className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition">
+          <button
+            onClick={handleSkip}
+            disabled={loading}
+            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white px-4 py-2 rounded-lg font-medium transition"
+          >
             <XCircle size={18} /> Skip
           </button>
         </div>
