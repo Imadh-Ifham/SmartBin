@@ -1,5 +1,12 @@
 import React from "react";
-import { Trash2, MapPin, User, CheckCircle, XCircle } from "lucide-react";
+import {
+  Trash2,
+  MapPin,
+  User,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+} from "lucide-react";
 import { useSelector } from "react-redux";
 import toast from "react-hot-toast";
 import {
@@ -7,6 +14,7 @@ import {
   selectScanQR,
   selectScanLoading,
   selectScanError,
+  selectCurrentScan,
   clearCurrentScan,
 } from "../slices/scanSlice";
 import { markBinsCollected } from "../slices/scanThunk";
@@ -15,10 +23,13 @@ import { useAppDispatch } from "../../../app/hooks";
 
 const ScanDetails: React.FC = () => {
   const dispatch = useAppDispatch();
+  const currentScan = useSelector(selectCurrentScan);
   const bins = useSelector(selectScanBins);
   const qr = useSelector(selectScanQR);
   const loading = useSelector(selectScanLoading);
   const error = useSelector(selectScanError);
+
+  const overweight = currentScan?.overweight;
 
   const handleSkip = () => {
     dispatch(clearCurrentScan());
@@ -84,6 +95,32 @@ const ScanDetails: React.FC = () => {
       </div>
 
       <div className="mt-5 space-y-4 text-gray-700">
+        {/* Overweight Warning */}
+        {overweight && (
+          <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="text-red-600 mt-0.5" size={24} />
+              <div className="flex-1">
+                <h4 className="font-bold text-red-800 mb-1">
+                  {overweight.status.replace(/_/g, " ")}
+                </h4>
+                <p className="text-red-700 text-sm mb-2">
+                  {overweight.message}
+                </p>
+                <div className="text-xs text-red-600 space-y-1">
+                  {overweight.bins.map((bin, idx) => (
+                    <div key={idx} className="font-medium">
+                      • Bin type {bin.type}: Exceeded by{" "}
+                      {bin.exceededBy.toFixed(1)} units ({bin.currentWeight} /{" "}
+                      {bin.limit})
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* QR Code */}
         <div className="flex items-center gap-2">
           <User className="text-gray-500" />

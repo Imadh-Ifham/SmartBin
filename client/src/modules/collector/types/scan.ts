@@ -28,9 +28,24 @@ export interface BinData {
   limit?: number;
 }
 
+export interface OverweightBinInfo {
+  id: string;
+  type: string;
+  currentWeight: number;
+  limit: number;
+  exceededBy: number;
+}
+
+export interface OverweightStatus {
+  status: "OVERWEIGHT_NOT_PAID";
+  message: string;
+  bins: OverweightBinInfo[];
+}
+
 export interface ScanResult {
   qr: QRData;
   bins: BinData[];
+  overweight?: OverweightStatus | null;
 }
 
 export interface ScanState {

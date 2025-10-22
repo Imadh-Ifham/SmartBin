@@ -60,6 +60,34 @@ export class SmartBinService {
 
     return this.repo.update(bin);
   }
+
+  /**
+   * Checks if any bins under a QR code are overweight
+   * @param qrCode - QR code ID to check bins for
+   * @returns Object with hasOverweight flag and list of overweight bins
+   */
+  async checkOverweightBins(qrCode: string) {
+    const bins = await this.repo.findByCode(qrCode);
+
+    if (!bins || bins.length === 0) {
+      return { hasOverweight: false, overweightBins: [] };
+    }
+
+    const overweightBins = bins.filter(
+      (bin: any) => bin.currentWeight > bin.limit
+    );
+
+    return {
+      hasOverweight: overweightBins.length > 0,
+      overweightBins: overweightBins.map((bin: any) => ({
+        id: bin._id,
+        type: bin.type,
+        currentWeight: bin.currentWeight,
+        limit: bin.limit,
+        exceededBy: bin.currentWeight - bin.limit,
+      })),
+    };
+  }
 }
 
 export const smartBinService = new SmartBinService();

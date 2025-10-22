@@ -1,4 +1,5 @@
 import { qrCodeService } from "../../smart-bin/services/qr-code.service";
+import { smartBinService } from "../../smart-bin/services/smartBin.service";
 import { scanRepository } from "../repositories/scan.repository";
 
 /**
@@ -27,7 +28,8 @@ export interface IScanPayload {
 export class ScanService {
   constructor(
     private qrService = qrCodeService,
-    private repo = scanRepository
+    private repo = scanRepository,
+    private binService = smartBinService
   ) {}
 
   /**
@@ -38,9 +40,10 @@ export class ScanService {
    * 2. Records the scan asynchronously.
    * 3. Retrieves QR code data from the QR service.
    * 4. Checks if the QR subscription is active.
+   * 5. Checks if any bins are overweight (unpaid penalty).
    *
    * @param payload - Scan details including code, source, and optional userId
-   * @returns QR code data if found and active
+   * @returns QR code data with overweight status if found and active
    * @throws {Error} If code is missing
    * @throws {Object} If QR code not found or subscription inactive
    */
@@ -58,7 +61,21 @@ export class ScanService {
     if (!isActive)
       throw { status: 400, message: "QR Code subscription inactive" };
 
-    return qrData;
+    // Check for overweight bins
+    const overweightCheck = await this.binService.checkOverweightBins(
+      qrData.qr._id.toString()
+    );
+
+    return {
+      ...qrData,
+      overweight: overweightCheck.hasOverweight
+        ? {
+            status: "OVERWEIGHT_NOT_PAID",
+            message: "Some bins exceed their weight limit. Payment required.",
+            bins: overweightCheck.overweightBins,
+          }
+        : null,
+    };
   }
 
   /**

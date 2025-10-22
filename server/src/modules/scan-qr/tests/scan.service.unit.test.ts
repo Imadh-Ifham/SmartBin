@@ -1,18 +1,21 @@
 import { ScanService, IScanPayload } from "../services/scan.service";
 import { qrCodeService } from "../../smart-bin/services/qr-code.service";
+import { smartBinService } from "../../smart-bin/services/smartBin.service";
 import { scanRepository } from "../repositories/scan.repository";
 
 jest.mock("../../smart-bin/services/qr-code.service");
+jest.mock("../../smart-bin/services/smartBin.service");
 jest.mock("../repositories/scan.repository");
 
 describe("ScanService Unit Tests", () => {
   let service: ScanService;
   const mockQrService = qrCodeService as jest.Mocked<typeof qrCodeService>;
+  const mockBinService = smartBinService as jest.Mocked<typeof smartBinService>;
   const mockRepo = scanRepository as jest.Mocked<typeof scanRepository>;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new ScanService(mockQrService, mockRepo);
+    service = new ScanService(mockQrService, mockRepo, mockBinService);
   });
 
   describe("handleScan", () => {
@@ -56,14 +59,22 @@ describe("ScanService Unit Tests", () => {
       };
       mockQrService.getByCode.mockResolvedValue(qrData as any);
       mockQrService.checkSubscription.mockResolvedValue(true);
+      mockBinService.checkOverweightBins.mockResolvedValue({
+        hasOverweight: false,
+        overweightBins: [],
+      } as any);
       mockRepo.save.mockResolvedValue({} as any);
 
       const result = await service.handleScan(payload);
 
-      expect(result).toEqual(qrData);
+      expect(result).toEqual({
+        ...qrData,
+        overweight: null,
+      });
       expect(mockRepo.save).toHaveBeenCalledWith(payload);
       expect(mockQrService.getByCode).toHaveBeenCalledWith("WP-12345-C");
       expect(mockQrService.checkSubscription).toHaveBeenCalledWith("Active");
+      expect(mockBinService.checkOverweightBins).toHaveBeenCalledWith("qr1");
     });
 
     it("should call recordScan with payload", async () => {
@@ -78,11 +89,54 @@ describe("ScanService Unit Tests", () => {
       };
       mockQrService.getByCode.mockResolvedValue(qrData as any);
       mockQrService.checkSubscription.mockResolvedValue(true);
+      mockBinService.checkOverweightBins.mockResolvedValue({
+        hasOverweight: false,
+        overweightBins: [],
+      } as any);
       mockRepo.save.mockResolvedValue({} as any);
 
       await service.handleScan(payload);
 
       expect(mockRepo.save).toHaveBeenCalledWith(payload);
+    });
+
+    it("should include overweight status when bins exceed limit", async () => {
+      const payload: IScanPayload = { code: "WP-12345-C", source: "camera" };
+      const qrData = {
+        qr: { _id: "qr1", code: "WP-12345-C", status: "Active" },
+        bins: [{ _id: "bin1", type: "plastic", currentWeight: 15, limit: 10 }],
+      };
+      const overweightCheck = {
+        hasOverweight: true,
+        overweightBins: [
+          {
+            id: "bin1",
+            type: "plastic",
+            currentWeight: 15,
+            limit: 10,
+            exceededBy: 5,
+          },
+        ],
+      };
+
+      mockQrService.getByCode.mockResolvedValue(qrData as any);
+      mockQrService.checkSubscription.mockResolvedValue(true);
+      mockBinService.checkOverweightBins.mockResolvedValue(
+        overweightCheck as any
+      );
+      mockRepo.save.mockResolvedValue({} as any);
+
+      const result = await service.handleScan(payload);
+
+      expect(result).toEqual({
+        ...qrData,
+        overweight: {
+          status: "OVERWEIGHT_NOT_PAID",
+          message: "Some bins exceed their weight limit. Payment required.",
+          bins: overweightCheck.overweightBins,
+        },
+      });
+      expect(mockBinService.checkOverweightBins).toHaveBeenCalledWith("qr1");
     });
   });
 

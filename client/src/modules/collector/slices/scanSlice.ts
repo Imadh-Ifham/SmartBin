@@ -133,6 +133,8 @@ export const selectScanQR = (state: RootState): QRData | null =>
   state.scan?.currentScan?.qr || null;
 export const selectScanBins = (state: RootState): BinData[] =>
   state.scan?.currentScan?.bins || [];
+export const selectScanOverweight = (state: RootState) =>
+  state.scan?.currentScan?.overweight || null;
 export const selectScanHistory = (state: RootState) =>
   state.scan?.scanHistory || [];
 export const selectScanLoading = (state: RootState) =>
