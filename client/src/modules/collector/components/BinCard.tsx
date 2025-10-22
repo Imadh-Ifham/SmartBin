@@ -2,19 +2,25 @@ import React from "react";
 import type { Bin } from "../../smart-bin/types/bin";
 import type { BinData } from "../types/scan";
 import { Scale } from "lucide-react";
+import { useSelector } from "react-redux";
+import { selectBinTypes } from "../slices/collectorSlice";
 
 const BinCard: React.FC<{ bin: Bin | BinData }> = ({ bin }) => {
   const binLimit = bin.limit || 0;
+
+  const binTypes = useSelector(selectBinTypes);
 
   return (
     <div className="bg-gray-50 rounded-lg p-3 flex justify-between items-center border border-gray-100">
       <div>
         <div className="flex items-center gap-2">
           <Scale size={16} className="text-gray-500" />
-          <span className="font-medium">{bin.type}</span>
+          <span className="font-medium">
+            {binTypes.find((type) => type._id === bin.type)?.name || bin.type}
+          </span>
         </div>
         <div className="text-sm text-gray-500">
-          Limit: {binLimit > 0 ? `${binLimit} kg` : "N/A"}
+          Limit: {binLimit > 0 ? `${binLimit} unit` : "N/A"}
         </div>
       </div>
       <div className="text-right">
@@ -39,11 +45,11 @@ const BinCard: React.FC<{ bin: Bin | BinData }> = ({ bin }) => {
                     : "text-green-600"
                 }`}
               >
-                {bin.currentWeight} kg
+                {bin.currentWeight} unit
               </span>
               {exceeded && (
                 <div className="text-xs text-red-600 mt-0.5">
-                  Exceeded by {exceededBy} kg
+                  Exceeded by {exceededBy} unit
                 </div>
               )}
               {binLimit > 0 && (

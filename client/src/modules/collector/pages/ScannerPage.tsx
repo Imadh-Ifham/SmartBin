@@ -4,6 +4,7 @@ import ScanDetails from "../components/ScanDetails";
 import { QrCode, Keyboard } from "lucide-react";
 import { useAppDispatch } from "../../../app/hooks";
 import { fetchBinTypes } from "../slices/collectorThunk";
+import VideoScanner from "../components/VideoScanner";
 
 const ScannerPage: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -24,7 +25,9 @@ const ScannerPage: React.FC = () => {
         </h2>
 
         {/* Video Scanner */}
-        <div className="relative mb-4">{/* <VideoScanner /> */}</div>
+        <div className="relative mb-4">
+          <VideoScanner />{" "}
+        </div>
 
         {/* Divider */}
         <div className="flex items-center my-4">
