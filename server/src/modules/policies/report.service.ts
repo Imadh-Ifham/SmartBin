@@ -4,6 +4,22 @@ export interface PerformanceReport {
   monthly: { month: string; score: number }[];
 }
 
+/**
+ * ReportService
+ *
+ * Provides performance and violation report data for policies. In this project the
+ * service returns deterministic mocked results to keep the module self-contained
+ * for tests. In production this would be replaced by a real reporting/analysis service.
+ *
+ * Responsibilities:
+ * - getPerformanceForPolicy(policyId): returns a PerformanceReport used by the
+ *   PolicyService.enrichPolicy method to attach a performanceReport to each policy.
+ * - getViolationsForPolicy(policyId): returns a list of violations used by
+ *   PolicyService.enrichPolicy.
+ *
+ * Pattern: this is a simple service object (Service Layer). It isolates reporting
+ * logic from policy business logic and can be swapped/mocked in tests.
+ */
 export class ReportService {
   // Return a mocked performance report for a policy
   async getPerformanceForPolicy(policyId: string): Promise<PerformanceReport> {
